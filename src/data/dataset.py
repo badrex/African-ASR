@@ -1,19 +1,20 @@
 # src/data/dataset.py
 import json
 import logging
-from typing import Dict, Tuple, List, Any, Optional
-from datasets import load_dataset, Dataset, Audio, concatenate_datasets
+from typing import Dict, Tuple, List, Any, Optional, Union
+from datasets import load_dataset, Dataset, Audio, DatasetDict
 
 from transformers import (
     Wav2Vec2CTCTokenizer, 
     Wav2Vec2FeatureExtractor, 
+    SeamlessM4TFeatureExtractor,
+    Wav2Vec2BertProcessor,
     Wav2Vec2Processor
 )
 
 from src.data.preprocessing import (
     clean_text_batch, 
     extract_all_chars, 
-    create_vocabulary, 
     prepare_dataset
 )
 
@@ -27,26 +28,27 @@ def load_datasets(config: ASRConfig) -> Tuple[Dataset, Dataset]:
         config: Configuration object containing dataset parameters
         
     Returns:
-        Tuple of (train_dataset, test_dataset)
+        Tuple of (train_dataset, eval_dataset)
     """
     # Load custom dataset if specified
-    if hasattr(config, 'use_custom_dataset') and config.use_custom_train_dataset:
-        if hasattr(config, 'custom_dataset_path') and config.dataset_path:
+    if hasattr(config, 'use_custom_dataset') and config.use_custom_dataset:
+        if hasattr(config, 'dataset_path') and config.dataset_path:
             logging.info(f"Loading custom training dataset from "
-                         f"{config.custom_dataset_path}")
+                         f"{config.dataset_path}...")
             
-            dataset = Dataset.load_from_disk(config.custom_train_dataset_path)
+            dataset = DatasetDict.load_from_disk(config.dataset_path)
 
         else:
-            raise ValueError("custom_dataset_path must be specified when use_custom_train_dataset is True")
+            raise ValueError(f"dataset_path must be specified "
+                             f"when use_custom_dataset is True")
     else:
         # not implemented yet
         raise NotImplementedError(
             "Loading from HuggingFace datasets is not implemented yet"
         )
     
-    train_dataset = dataset['train']
-    test_dataset = dataset['validation']
+    train_dataset = dataset[config.train_split]
+    eval_dataset = dataset[config.eval_split]
 
     # Remove unwanted features
     features_to_remove = [
@@ -56,23 +58,30 @@ def load_datasets(config: ASRConfig) -> Tuple[Dataset, Dataset]:
     # Sample dataset if specified
     if config.sample:
         train_dataset = train_dataset.select(range(config.sample_size))
+        eval_dataset = eval_dataset.select(range(config.sample_size))
     
     # Remove columns and clean text
     train_dataset = train_dataset.remove_columns(features_to_remove)
-    test_dataset = test_dataset.remove_columns(features_to_remove)
+    eval_dataset = eval_dataset.remove_columns(features_to_remove)
     
     # Preprocess text transcripts by removing special characters
     train_dataset = train_dataset.map(
-        lambda batch: clean_text_batch(batch, config.chars_to_remove_regex)
+        lambda batch: clean_text_batch(batch),
+        batched=True,
+        batch_size=1000,
     )
-    test_dataset = test_dataset.map(
-        lambda batch: clean_text_batch(batch, config.chars_to_remove_regex)
+    eval_dataset = eval_dataset.map(
+        lambda batch: clean_text_batch(batch),
+        batched=True,
+        batch_size=1000,
     )
     
-    return train_dataset, test_dataset
+    return train_dataset, eval_dataset
 
 
-def build_vocabulary(train_dataset: Dataset, test_dataset: Dataset, output_path: str = "vocab.json") -> Dict[str, int]:
+def build_vocabulary(train_dataset: Dataset,
+                     test_dataset: Dataset,
+                     output_path: str = "./vocab.json") -> Dict[str, int]:
     """Build vocabulary from datasets and save it to a file.
     
     Args:
@@ -113,13 +122,15 @@ def build_vocabulary(train_dataset: Dataset, test_dataset: Dataset, output_path:
     
     # Save vocabulary to file
     with open(output_path, 'w') as vocab_file:
-        json.dump(vocab_dict, vocab_file)
+        json.dump(vocab_dict, vocab_file,  indent=4)
     
     return vocab_dict
 
 
-def create_processor(vocab_path: str = "./vocab") -> Wav2Vec2Processor:
-    """Create Wav2Vec2Processor from tokenizer and feature extractor.
+def create_processor(
+        config: ASRConfig, 
+        vocab_path: str = "./vocab") -> Union[Wav2Vec2Processor, Wav2Vec2BertProcessor]:
+    """Create a processor from tokenizer and feature extractor.
     
     Args:
         vocab_path: Path to directory containing vocabulary file
@@ -136,24 +147,37 @@ def create_processor(vocab_path: str = "./vocab") -> Wav2Vec2Processor:
     )
     
     # Initialize feature extractor
-    feature_extractor = Wav2Vec2FeatureExtractor(
-        feature_size=1,
-        sampling_rate=16000,
-        padding_value=0.0,
-        do_normalize=True,
-        return_attention_mask=True
-    )
-    
-    # Combine into processor
-    processor = Wav2Vec2Processor(
-        feature_extractor=feature_extractor,
-        tokenizer=tokenizer
-    )
+    if config.pretrained_model == "facebook/w2v-bert-2.0":
+        feature_extractor = SeamlessM4TFeatureExtractor.from_pretrained(
+            "facebook/w2v-bert-2.0"
+        )
+
+        # Combine into processor
+        processor = Wav2Vec2BertProcessor(
+            feature_extractor=feature_extractor, 
+            tokenizer=tokenizer
+        )
+
+    else:
+        feature_extractor = Wav2Vec2FeatureExtractor(
+            feature_size=1,
+            sampling_rate=16000,
+            padding_value=0.0,
+            do_normalize=True,
+            return_attention_mask=True
+        )
+        # Combine into processor
+        processor = Wav2Vec2Processor(
+            feature_extractor=feature_extractor,
+            tokenizer=tokenizer
+        )
     
     return processor
 
 
-def prepare_datasets(train_dataset: Dataset, eval_dataset: Dataset, processor: Wav2Vec2Processor) -> Tuple[Dataset, Dataset]:
+def prepare_datasets(train_dataset: Dataset, 
+                     eval_dataset: Dataset, 
+                     processor: Wav2Vec2Processor) -> Tuple[Dataset, Dataset]:
     """Prepare datasets for training by adding processed inputs.
     
     Args:

@@ -1,7 +1,7 @@
 # This file is identical to ASR_train_config.yaml, but with a smaller sample size for testing purposes
 # Project settings
 project: "Kinyarwanda-ASR"
-output_dir: "outputs/baseline"
+output_dir: "inprogress/baseline"
 seed: 42
 
 # Model settings
@@ -12,26 +12,24 @@ freeze_feature_encoder: false
 batch_size: 4
 gradient_accumulation_steps: 16
 num_epochs: 25
-max_steps: 50000
+max_steps: 300
 learning_rate: 0.00005
 warmup_ratio: 0.1
 fp16: true
 gradient_checkpointing: true
-save_steps: 1000
-eval_steps: 1000
-logging_steps: 50
+save_steps: 300
+eval_steps: 300
+logging_steps: 10
 save_total_limit: 2
 
 # Data settings
 use_custom_dataset: true
-dataset_path: "./kinyarwanda_asr_dataset"
-
-training_split: "train"
-validation_split: "validation"
-test_split: "test"
+dataset_path: "./kinyarwanda-ASR/kinyarwanda_asr_dataset"
+train_split: "train"
+eval_split: "validation"
 
 # Data preprocessing settings
 sample: true
 sample_size: 1000 # not used if sample is false
-include_apstrophes: true
+#include_apstrophes: true
 

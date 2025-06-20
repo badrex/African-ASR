@@ -9,8 +9,9 @@ freeze_feature_encoder: false
 
 # Training settings
 batch_size: 4
-gradient_accumulation_steps: 4
-num_epochs: 10
+gradient_accumulation_steps: 16
+num_epochs: 25
+max_steps: 16000
 learning_rate: 0.00005
 warmup_ratio: 0.1
 fp16: true
@@ -22,13 +23,11 @@ save_total_limit: 2
 
 # Data settings
 use_custom_dataset: true
-custom_dataset_path: "./kinyarwanda_asr_dataset"
-
-training_split: "train"
-validation_split: "validation"
-test_split: "test"
+dataset_path: "./kinyarwanda-ASR/kinyarwanda_asr_dataset"
+train_split: "train"
+eval_split: "validation"
 
 # Data preprocessing settings
-sample: false
-sample_size: 10000 # not used if sample is false
-chars_to_remove_regex: null
+sample: true
+sample_size: 1000 # not used if sample is false
+#include_apstrophes: true

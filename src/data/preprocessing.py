@@ -40,7 +40,7 @@ def extract_all_chars(batch: Dict[str, List[str]]) -> Dict[str, List[Any]]:
     Returns:
         Dictionary with vocabulary and text information
     """
-    all_text = " ".join(batch["transcription"])
+    all_text = " ".join(batch["clean_transcription"])
     vocab = list(set(all_text))
     return {"vocab": [vocab], "all_text": [all_text]}
 
@@ -73,7 +73,8 @@ def prepare_dataset(batch: Dict[str, Any], processor) -> Dict[str, Any]:
     
     Args:
         batch: Dictionary containing batch data
-        processor: Wav2Vec2Processor for audio and text processing
+        processor: 
+            Wav2Vec2Processor or Wav2Vec2BertProcessor for audio and text processing
         
     Returns:
         Processed batch ready for model input
@@ -100,6 +101,6 @@ def prepare_dataset(batch: Dict[str, Any], processor) -> Dict[str, Any]:
         batch["input_length"] = len(batch["input_values"])
     
     # Process text (updated approach)
-    batch["labels"] = processor(text=batch["transcription"]).input_ids
+    batch["labels"] = processor(text=batch["clean_transcription"]).input_ids
     
     return batch

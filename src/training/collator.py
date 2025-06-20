@@ -19,7 +19,6 @@ class DataCollatorCTCWithPadding:
         processor: Wav2Vec2Processor for processing inputs
         padding: Padding strategy (True/False or 'longest')
     """
-    model: str
     processor: Union[Wav2Vec2Processor, Wav2Vec2BertProcessor]  # Processor for audio and text
     padding: Union[bool, str] = True
 
@@ -36,11 +35,6 @@ class DataCollatorCTCWithPadding:
         Returns:
             Batch dictionary with padded tensors
         """
-        # Split inputs and labels
-        # if model is w2v-BERT, use input_features as key for input values
-
-        #logging.info(f"model: {self.model}")
-
 
         if isinstance(self.processor, Wav2Vec2BertProcessor):
             input_key = "input_features"

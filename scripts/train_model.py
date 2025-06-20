@@ -12,6 +12,8 @@ import numpy as np
 import torch
 import wandb
 
+os.environ['NUMBA_CACHE_DIR' ] = '/tmp/'
+
 # Disable setting seeds for huggingface because it causes issues with cache access
 #from transformers import set_seed as huggingface_set_seed
 
@@ -30,7 +32,10 @@ def load_env_file(env_path='.env'):
                         # Skip lines that don't have the format KEY=VALUE
                         continue
         return True
-    return False
+    else:
+        print(f"Warning: .env file not found at {env_path}. "
+              "Environment variables will not be loaded.")
+        return False
 
 # Try to load from .env file in project root
 script_dir = Path(os.path.dirname(os.path.abspath(__file__)))
@@ -57,20 +62,20 @@ from src.training.collator import DataCollatorCTCWithPadding
 from src.training.trainer import create_asr_trainer
 
 # Verify HF_HOME is set and the directory exists
-hf_home = os.environ.get('HF_HOME')
+# hf_home = os.environ.get('HF_HOME')
 
-if hf_home:
-    os.makedirs(hf_home, exist_ok=True)
-    print(f"Using HF_HOME: {hf_home}")
+# if hf_home:
+#     os.makedirs(hf_home, exist_ok=True)
+#     print(f"Using HF_HOME: {hf_home}")
 
-else:
-    print("Warning: HF_HOME not set in environment variables")
+# else:
+#     print("Warning: HF_HOME not set in environment variables")
 
-    # Set a default if not found
-    default_hf_home = os.path.expanduser('~/.cache/huggingface')
-    os.environ['HF_HOME'] = default_hf_home
-    os.makedirs(default_hf_home, exist_ok=True)
-    print(f"Setting default HF_HOME to: {default_hf_home}")
+#     # Set a default if not found
+#     default_hf_home = os.path.expanduser('~/.cache/huggingface')
+#     os.environ['HF_HOME'] = default_hf_home
+#     os.makedirs(default_hf_home, exist_ok=True)
+#     print(f"Setting default HF_HOME to: {default_hf_home}")
 
 
 # Add project root to Python path
@@ -154,11 +159,14 @@ def main():
             config={
                 'learning_rate': config.learning_rate,
                 'model': config.pretrained_model,
-                'language': config.target_language,
                 'batch_size': config.batch_size,
                 'epochs': config.num_epochs
             }
         )
+    else:
+        logging.warning("WANDB_API_KEY not found in environment variables. "
+                        "Weights & Biases logging will be disabled.")
+    
     
     # Create output directory
     output_dir = Path(config.output_dir)
@@ -172,11 +180,27 @@ def main():
     
     # Build vocabulary
     logging.info("Building vocabulary...")
-    vocab_dict = build_vocabulary(train_dataset, eval_dataset)
+    
+    vocab_path = os.path.join(project_root, "vocab")
+    os.makedirs(vocab_path, exist_ok=True)
+
+    vocab_file = os.path.join(vocab_path, "vocab.json")
+
+    vocab_dict = build_vocabulary(train_dataset, eval_dataset, vocab_file)
+
+    logging.info(f"Size of vocabulary created: {len(vocab_dict)}.")
+    
+
+    # save vocab_dict as JSON -- but this is handled by build_vocabulary
+    # with open(vocab_file, 'w') as f:
+    #     json.dump(vocab_dict, f, indent=4)
+
     
     # Create processor
     logging.info("Creating processor...")
-    processor = create_processor("./vocab")
+    processor = create_processor(config, vocab_path)
+
+    logging.info(f"Type of the processor: {type(processor)}")   
     
     # Prepare datasets
     logging.info("Preparing datasets...")
@@ -189,7 +213,10 @@ def main():
     model = create_asr_model(config, processor)
     
     # Create data collator
-    data_collator = DataCollatorCTCWithPadding(processor=processor, padding=True)
+    data_collator = DataCollatorCTCWithPadding(
+        processor=processor, 
+        padding=True
+    )
     
     # Create and run trainer
     logging.info("Starting training model for ASR...")

@@ -36,13 +36,14 @@ class ASRConfig:
     warmup_steps: int = 0  # Specific number of warmup steps (instead of ratio)
     
     # Data settings
-    training_splits: str = "train"
+    train_split: str = "train"
     eval_split: str = "validation"
-    use_custom_train_dataset: bool = False
-    custom_train_dataset_path: Optional[str] = None
+    
+    use_custom_dataset: bool = False
+    dataset_path: Optional[str] = None
     sample: bool = False
     sample_size: int = 1000
-    chars_to_remove_regex: str = r'[\,\?\.\!\-\;\:\"\"\%\"\�\']'
+    #chars_to_remove_regex: str = r'[\,\?\.\!\-\;\:\"\"\%\"\�\']'
     
     # Model mappings
     pretrained_model_map: Dict[str, str] = field(default_factory=lambda: {
