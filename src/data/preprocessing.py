@@ -68,39 +68,71 @@ def create_vocabulary(dataset: Dataset) -> Dict[str, int]:
     return vocab_dict
 
 
-def prepare_dataset(batch: Dict[str, Any], processor) -> Dict[str, Any]:
-    """Prepare dataset for training by processing audio and tokenizing text.
+# def prepare_dataset(batch: Dict[str, Any], processor) -> Dict[str, Any]:
+#     """Prepare dataset for training by processing audio and tokenizing text.
     
-    Args:
+#     Args:
+#         batch: Dictionary containing batch data
+#         processor: 
+#             Wav2Vec2Processor or Wav2Vec2BertProcessor for audio and text processing
+        
+#     Returns:
+#         Processed batch ready for model input
+#     """
+#     # Process audio
+#     audio = batch["audio"]
+
+#     # check wheather the processor is Wav2Vec2BertProcessor
+#     if isinstance(processor, Wav2Vec2BertProcessor):
+#         batch["input_features"] = processor(
+#             audio["array"], 
+#             sampling_rate=audio["sampling_rate"]
+#         ).input_features[0]
+
+#         batch["input_length"] = len(batch["input_features"])
+
+#     # for Wav2Vec2Processor or similar processors 
+#     else:
+#         batch["input_values"] = processor(
+#             audio["array"], 
+#             sampling_rate=audio["sampling_rate"]
+#         ).input_values[0]
+
+#         batch["input_length"] = len(batch["input_values"])
+    
+#     # Process text (updated approach)
+#     batch["labels"] = processor(text=batch["clean_transcription"]).input_ids
+    
+#     return batch
+
+def prepare_dataset(batch: Dict[str, Any], processor) -> Dict[str, Any]:
+    """prepare dataset for training by processing audio and tokenizing text.
+        Args:
         batch: Dictionary containing batch data
         processor: 
-            Wav2Vec2Processor or Wav2Vec2BertProcessor for audio and text processing
+            Wav2Vec2Processor/Wav2Vec2BertProcessor for audio/text processing
         
     Returns:
         Processed batch ready for model input
     """
+
     # Process audio
     audio = batch["audio"]
-
-    # check wheather the processor is Wav2Vec2BertProcessor
-    if isinstance(processor, Wav2Vec2BertProcessor):
-        batch["input_features"] = processor(
-            audio["array"], 
-            sampling_rate=audio["sampling_rate"]
-        ).input_features[0]
-
-        batch["input_length"] = len(batch["input_features"])
-
-    # for Wav2Vec2Processor or similar processors 
-    else:
-        batch["input_values"] = processor(
-            audio["array"], 
-            sampling_rate=audio["sampling_rate"]
-        ).input_values[0]
-
-        batch["input_length"] = len(batch["input_values"])
+    features = processor(audio["array"], sampling_rate=audio["sampling_rate"])
     
-    # Process text (updated approach)
+    # handle both processor types in one line
+    is_w2vBERT = isinstance(processor, Wav2Vec2BertProcessor)
+
+    if is_w2vBERT: 
+        key = "input_features"
+        features = features.input_features[0]
+    else:
+        # for Wav2Vec2Processor or similar processors
+        key = "input_values"
+        features = features.input_values[0]
+    
+    batch[key] = features
+    batch["input_length"] = len(features)
     batch["labels"] = processor(text=batch["clean_transcription"]).input_ids
     
     return batch
