@@ -12,7 +12,6 @@ import numpy as np
 import torch
 import wandb
 
-os.environ['NUMBA_CACHE_DIR' ] = '/tmp/'
 
 # Disable setting seeds for huggingface because it causes issues with cache access
 #from transformers import set_seed as huggingface_set_seed
@@ -233,10 +232,11 @@ def main():
     trainer.train()
     
     # Save model
+    logging.info("Saving model and processor...")
     experiment_name = config.get_experiment_name()
     model_output_dir = output_dir / experiment_name
     model_output_dir.mkdir(exist_ok=True, parents=True)
-    
+
     trainer.save_model(str(model_output_dir))
     processor.save_pretrained(str(model_output_dir))
 
@@ -260,6 +260,7 @@ def main():
     logging.info(f"Training completed. Model saved to {model_output_dir}")
 
     # add code to delete dataset cache
+    logging.info("Cleaning up dataset cache files...")
     train_dataset.cleanup_cache_files()
     eval_dataset.cleanup_cache_files()
 

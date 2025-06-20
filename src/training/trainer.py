@@ -59,7 +59,7 @@ def create_training_args(config: ASRConfig, experiment_name: str) -> TrainingArg
         report_to="wandb",
         load_best_model_at_end=True,
         metric_for_best_model="score",
-        greater_is_better=False,
+        greater_is_better=True,
     )  
 
 
