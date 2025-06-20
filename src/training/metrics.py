@@ -1,10 +1,9 @@
 # src/training/metrics.py
 from typing import Dict, List
 import numpy as np
-import evaluate
 
 
-def compute_metrics(pred, processor):
+def compute_metrics(pred, processor, wer_metric, cer_metric):
     """
     Compute Word Error Rate (WER) and Character Error Rate (CER) metrics.
     
@@ -15,9 +14,7 @@ def compute_metrics(pred, processor):
     Returns:
         Dictionary of evaluation metrics
     """
-    # Load metrics
-    wer_metric = evaluate.load("wer")
-    cer_metric = evaluate.load("cer")
+
     
     # Get logits and ids
     pred_logits = pred.predictions

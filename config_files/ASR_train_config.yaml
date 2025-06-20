@@ -8,8 +8,8 @@ pretrained_model: "facebook/w2v-bert-2.0"
 freeze_feature_encoder: false
 
 # Training settings
-batch_size: 4
-gradient_accumulation_steps: 16
+batch_size: 8
+gradient_accumulation_steps: 4
 num_epochs: 25
 max_steps: 16000
 learning_rate: 0.00005
@@ -28,6 +28,6 @@ train_split: "train"
 eval_split: "validation"
 
 # Data preprocessing settings
-sample: true
+sample: false
 sample_size: 1000 # not used if sample is false
 #include_apstrophes: true

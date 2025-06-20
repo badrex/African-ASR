@@ -110,6 +110,4 @@ if __name__ == "__main__":
     # save dataset
     dataset.save_to_disk('./kinyarwanda_asr_dataset')
     print("dataset saved to ./kinyarwanda_asr_dataset")
-    
-    # optional: push to hub
-    # dataset.push_to_hub("your-username/kinyarwanda-asr")
+

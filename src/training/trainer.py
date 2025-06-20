@@ -3,6 +3,7 @@ import os
 from typing import Dict, Any, Optional
 import torch
 from transformers import Trainer, TrainingArguments, Wav2Vec2Processor
+import evaluate
 
 from src.utils.config import ASRConfig
 from src.training.metrics import compute_metrics
@@ -89,6 +90,11 @@ def create_asr_trainer(
     
     # Create training arguments
     training_args = create_training_args(config, experiment_name)
+
+    # Load eval metrics
+    # this was moved from /src/training/metrics.py to here because evaluation loop was too slow
+    wer_metric = evaluate.load("wer")
+    cer_metric = evaluate.load("cer")
     
     # Create trainer
     trainer = Trainer(
@@ -98,7 +104,12 @@ def create_asr_trainer(
         eval_dataset=eval_dataset,
         processing_class=processor.feature_extractor,
         data_collator=data_collator,
-        compute_metrics=lambda pred: compute_metrics(pred, processor),
+        compute_metrics=lambda pred: compute_metrics(
+            pred, 
+            processor, 
+            wer_metric=wer_metric,
+            cer_metric=cer_metric
+        ),
     )
     
     return trainer
