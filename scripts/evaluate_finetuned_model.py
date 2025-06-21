@@ -70,10 +70,14 @@ def transcribe_audio(audio_array: Audio,
     with torch.no_grad():
         logits = model(**inputs).logits
 
-    generated_ids = torch.argmax(logits, dim=-1)
-    transcription = processor.batch_decode(generated_ids)[0]
+    predicted_ids = torch.argmax(logits, dim=-1)
 
-    return transcription.strip()
+    transcription = processor.batch_decode(
+        predicted_ids, 
+        skip_special_tokens=True # this should ignore special tokens like [PAD]
+    )
+
+    return transcription[0].strip()
 
 
 def evaluate_split(dataset: Dataset, 
@@ -112,10 +116,14 @@ def evaluate_split(dataset: Dataset,
         audio_array = sample['audio']['array']
         
         # Transcribe
-        pred_text = process_text(
-            transcribe_audio(audio_array, model, processor, device)
-        )
-        
+        pred_text = transcribe_audio(audio_array, model, processor, device)
+
+        # remove [PAD] tokens from prediction
+        # this is a hack for now, should be investigated and fixed properly
+        #pred_text = pred_text.replace("[PAD]", "").strip()
+
+        #pred_text = transcribe_audio(audio_array, model, processor, device)
+
         # Use cleaned_text as reference
         ref_text = process_text(sample[text_column])
 
@@ -178,7 +186,8 @@ def main():
     logging.info("Starting evaluation script...")
 
     # Configuration
-    model_path = "./outputs/baseline/facebook/w2v-bert-2.0-20062025-070824/checkpoint-400/"  
+    #model_path = "./inprogress/baseline/facebook/w2v-bert-2.0-20062025-203510/checkpoint-2400"  
+    model_path = "./inprogress/baseline/facebook/w2v-bert-2.0-20062025-203510/checkpoint-2800"
 
 
     dataset_path = "./kinyarwanda-ASR/kinyarwanda_asr_dataset"
@@ -240,3 +249,29 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+"""
+
+with skipe_special_tokens=True, the output is:
+==================================================
+EVALUATION SUMMARY
+==================================================
+     Split  Samples  WER (%) CER (%) Score (%)
+validation     4632 18.3810% 3.9781%  90.2607%
+
+without skipe_special_tokens=True, the output is:
+==================================================
+EVALUATION SUMMARY
+==================================================
+     Split  Samples  WER (%) CER (%) Score (%)
+validation     4632 18.3810% 3.9781%  90.2607%
+
+2800
+==================================================
+EVALUATION SUMMARY
+==================================================
+     Split  Samples  WER (%) CER (%) Score (%)
+validation     4632 15.6370% 3.3036%  91.7631%
+
+"""

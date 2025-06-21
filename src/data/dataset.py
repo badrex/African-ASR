@@ -121,7 +121,7 @@ def build_vocabulary(train_dataset: Dataset,
     vocab_dict["[PAD]"] = len(vocab_dict)
     
     # Save vocabulary to file
-    with open(output_path, 'w') as vocab_file:
+    with open(f"{output_path}/vocab.json", 'w') as vocab_file:
         json.dump(vocab_dict, vocab_file,  indent=4)
     
     return vocab_dict

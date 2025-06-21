@@ -180,16 +180,18 @@ def main():
     # Build vocabulary
     logging.info("Building vocabulary...")
     
-    vocab_path = os.path.join(project_root, "vocab")
-    os.makedirs(vocab_path, exist_ok=True)
+    experiment_name = config.get_experiment_name()
 
-    vocab_file = os.path.join(vocab_path, "vocab.json")
+    model_dir = os.path.join(output_dir, experiment_name)
+    os.makedirs(model_dir, exist_ok=True)
+    
+    #vocab_path = os.path.join(model_dir, "vocab.json")
 
-    vocab_dict = build_vocabulary(train_dataset, eval_dataset, vocab_file)
+    vocab_dict = build_vocabulary(train_dataset, eval_dataset, model_dir)
 
     logging.info(f"Size of vocabulary created: {len(vocab_dict)}.")
+    logging.info(f"Items of the vocabulary: {list(vocab_dict.items())}...")
     
-
     # save vocab_dict as JSON -- but this is handled by build_vocabulary
     # with open(vocab_file, 'w') as f:
     #     json.dump(vocab_dict, f, indent=4)
@@ -197,7 +199,7 @@ def main():
     
     # Create processor
     logging.info("Creating processor...")
-    processor = create_processor(config, vocab_path)
+    processor = create_processor(config, model_dir)
 
     logging.info(f"Type of the processor: {type(processor)}")   
     
@@ -233,12 +235,11 @@ def main():
     
     # Save model
     logging.info("Saving model and processor...")
-    experiment_name = config.get_experiment_name()
-    model_output_dir = output_dir / experiment_name
-    model_output_dir.mkdir(exist_ok=True, parents=True)
+    #model_output_dir = output_dir / experiment_name
+    #model_output_dir.mkdir(exist_ok=True, parents=True)
 
-    trainer.save_model(str(model_output_dir))
-    processor.save_pretrained(str(model_output_dir))
+    trainer.save_model(str(model_dir))
+    processor.save_pretrained(str(model_dir))
 
     # push model to Hugging Face Hub as a private model
     # if os.environ.get("HF_API_KEY"):
