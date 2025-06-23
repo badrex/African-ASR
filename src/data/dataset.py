@@ -145,6 +145,12 @@ def create_processor(
         pad_token="[PAD]",
         word_delimiter_token="|"
     )
+
+    # debug 
+    print("Tokenizer class:", tokenizer.__class__)
+    print("Special tokens:", tokenizer.special_tokens_map)
+    print("All tokens:", tokenizer.get_vocab().keys())
+
     
     # Initialize feature extractor
     if config.pretrained_model == "facebook/w2v-bert-2.0":

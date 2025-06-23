@@ -187,26 +187,26 @@ def main():
 
     # Configuration
     #model_path = "./inprogress/baseline/facebook/w2v-bert-2.0-20062025-203510/checkpoint-2400"  
-    model_path = "./inprogress/baseline/facebook/w2v-bert-2.0-20062025-203510/checkpoint-2800"
-
+    model_path = "./inprogress/current_best/checkpoint-13200/"
 
     dataset_path = "./kinyarwanda-ASR/kinyarwanda_asr_dataset"
 
     text_column = 'transcription' 
+    split = 'validation' 
 
     logging.info(f"Loading dataset {dataset_path}...")
 
     dataset = load_from_disk(dataset_path)
     
-    print("Loading trained model...")
+    print("Loading trained model from {model_path}...")
     model, processor, device = load_model(model_path)
+
     print(f"Model loaded on device: {device}")
     
     results = {}
     
-
     results['validation'] = evaluate_split(
-        dataset, model, processor, device, 'validation', text_column
+        dataset, model, processor, device, split, text_column
     )
 
 
@@ -252,7 +252,6 @@ if __name__ == "__main__":
 
 
 """
-
 with skipe_special_tokens=True, the output is:
 ==================================================
 EVALUATION SUMMARY
@@ -273,5 +272,20 @@ EVALUATION SUMMARY
 ==================================================
      Split  Samples  WER (%) CER (%) Score (%)
 validation     4632 15.6370% 3.3036%  91.7631%
+
+6800
+==================================================
+EVALUATION SUMMARY
+==================================================
+     Split  Samples  WER (%) CER (%) Score (%)
+validation     4632 11.0892% 2.4881%  94.0715%
+
+13200
+==================================================
+EVALUATION SUMMARY
+==================================================
+     Split  Samples WER (%) CER (%) Score (%)
+validation     4632 9.3677% 2.1123%  94.9855%
+
 
 """

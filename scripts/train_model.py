@@ -201,6 +201,10 @@ def main():
     logging.info("Creating processor...")
     processor = create_processor(config, model_dir)
 
+    # save processor to disk 
+    logging.info(f"Saving processor to {model_dir}...")
+    processor.save_pretrained(model_dir)
+
     logging.info(f"Type of the processor: {type(processor)}")   
     
     # Prepare datasets
@@ -241,6 +245,9 @@ def main():
     trainer.save_model(str(model_dir))
     processor.save_pretrained(str(model_dir))
 
+    logging.info(f"Training completed. Model saved to {model_dir}")
+
+
     # push model to Hugging Face Hub as a private model
     # if os.environ.get("HF_API_KEY"):
     #     model.push_to_hub(
@@ -255,10 +262,10 @@ def main():
     logging.info(f"Final evaluation metrics: {metrics}")
     
     # Save metrics
-    with open(model_output_dir / "metrics.json", "w") as f:
+    with open(model_dir / "metrics.json", "w") as f:
         json.dump(metrics, f)
     
-    logging.info(f"Training completed. Model saved to {model_output_dir}")
+    logging.info(f"Training completed. Metrics savec to {model_dir}")
 
     # add code to delete dataset cache
     logging.info("Cleaning up dataset cache files...")

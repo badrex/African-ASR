@@ -23,9 +23,9 @@ def create_asr_model(config: ASRConfig, processor: Wav2Vec2Processor) -> Wav2Vec
     # Initialize model
     model = AutoModelForCTC.from_pretrained(
         pretrained_model_path,
-        attention_dropout=0.0,
-        hidden_dropout=0.0,
-        feat_proj_dropout=0.0,
+        attention_dropout=0.00,
+        hidden_dropout=0.00,
+        feat_proj_dropout=0.00,
         mask_time_prob=0.05,
         layerdrop=0.0,
         ctc_loss_reduction="mean",
@@ -38,10 +38,10 @@ def create_asr_model(config: ASRConfig, processor: Wav2Vec2Processor) -> Wav2Vec
     if hasattr(model, 'freeze_feature_encoder') and config.freeze_feature_encoder:
         model.freeze_feature_encoder()
 
-    # If model is based on SeamlessM4T, freeze feature encoder if specified
-    elif hasattr(model, 'freeze_feature_extractor') and config.freeze_feature_encoder:
-        #model.freeze_feature_extractor()
-        pass
+    # # If model is based on SeamlessM4T, freeze feature encoder if specified
+    # elif hasattr(model, 'freeze_feature_extractor') and config.freeze_feature_encoder:
+    #     #model.freeze_feature_extractor()
+    #     pass
     
     return model
 

@@ -11,7 +11,7 @@ freeze_feature_encoder: false
 batch_size: 4
 gradient_accumulation_steps: 8
 num_epochs: 25
-max_steps: 4000
+max_steps: 32000
 learning_rate: 0.00005 #0.00005
 warmup_ratio: 0.1
 fp16: true
