@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 
 import torch
-from transformers import AutoProcessor, AutoModelForCTC
+from transformers import AutoProcessor, AutoModelForCTC, Wav2Vec2ProcessorWithLM
+from pyctcdecode import build_ctcdecoder
 from datasets import load_from_disk, Audio, Dataset
 import jiwer
 import pandas as pd
@@ -70,14 +71,18 @@ def transcribe_audio(audio_array: Audio,
     with torch.no_grad():
         logits = model(**inputs).logits
 
-    predicted_ids = torch.argmax(logits, dim=-1)
+    # print shape
+    print(f"----------------------------------------------------------")
 
-    transcription = processor.batch_decode(
-        predicted_ids, 
-        skip_special_tokens=True # this should ignore special tokens like [PAD]
-    )
+    predicted_ids = logits.cpu().numpy() #.argmax(dim=-1)
 
-    return transcription[0].strip()
+    # print shape 
+
+    transcription = processor.batch_decode(predicted_ids)
+
+    #print(f"Transcription: {transcription[0]}")
+
+    return transcription[0][0].strip()
 
 
 def evaluate_split(dataset: Dataset, 
@@ -126,7 +131,7 @@ def evaluate_split(dataset: Dataset,
         # Use cleaned_text as reference
         ref_text = process_text(sample[text_column])
 
-        print(f"{i} Reference: {ref_text}")
+        print(f"{i}  Reference: {ref_text}")
         print(f"{i} Prediction: {pred_text}")
 
         predictions.append(pred_text)
@@ -187,17 +192,37 @@ def main():
     # Configuration
     #model_path = "./inprogress/baseline/facebook/w2v-bert-2.0-20062025-203510/checkpoint-2400"  
     #model_path = "./inprogress/current_best/checkpoint-13200/"
-    model_path = "./inprogress/baseline/facebook/w2v-bert-2.0-22062025-210026"
+    #model_path = "./inprogress/baseline/facebook/w2v-bert-2.0-22062025-210026"
+    model_path = "inprogress/baseline/facebook/w2v-bert-2.0-23062025-130024"
 
-    print("Loading trained model from {model_path}...")
+    print(f"Loading trained model from {model_path}...")
     model, processor, device = load_model(model_path)
 
     print(f"Model loaded on device: {device}")
 
-    dataset_path = "./kinyarwanda-common-voice"
+    vocab_dict = processor.tokenizer.get_vocab()
+    sorted_vocab_dict = {
+        k.lower(): v 
+        for k, v in sorted(vocab_dict.items(), key=lambda item: item[1])
+    }
 
-    text_column = 'sentence' #'transcription' 
-    split = 'test' 
+
+    decoder = build_ctcdecoder(
+        labels=list(sorted_vocab_dict.keys()),
+        kenlm_model_path="./kinyarwanda-ASR/kenLM/2gram.arpa",
+    )
+
+
+    processor_with_lm = Wav2Vec2ProcessorWithLM(
+        feature_extractor=processor.feature_extractor,
+        tokenizer=processor.tokenizer,
+        decoder=decoder
+    )
+
+    dataset_path = "./kinyarwanda-ASR//kinyarwanda_asr_dataset" 
+
+    text_column = 'transcription' 
+    split = 'validation' 
 
     logging.info(f"Loading dataset {dataset_path}/{split}...")
     dataset = load_from_disk(dataset_path + f"/{split}")
@@ -205,7 +230,7 @@ def main():
     results = {}
     
     results[split] = evaluate_split(
-        dataset, model, processor, device, text_column, split
+        dataset, model, processor_with_lm, device, text_column, split
     )
 
 

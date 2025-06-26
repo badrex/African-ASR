@@ -262,7 +262,7 @@ def main():
     logging.info(f"Final evaluation metrics: {metrics}")
     
     # Save metrics
-    with open(model_dir / "metrics.json", "w") as f:
+    with open(model_dir + "/metrics.json", "w") as f:
         json.dump(metrics, f)
     
     logging.info(f"Training completed. Metrics savec to {model_dir}")

@@ -13,7 +13,7 @@ def clean_text(text):
     #text = text.replace('．', '.')
     
     # keep only allowed characters
-    allowed = "abcdefghijklmnopqrstuvwxyz \'"
+    allowed = "abcdefghijklmnopqrstuvwxyz \'" # \'
     text = ''.join(c for c in text if c.lower() in allowed)
     
     # normalize whitespace
