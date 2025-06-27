@@ -13,6 +13,7 @@ import evaluate
 import re
 from typing import Dict, List, Any, Tuple
 import logging
+import argparse
 
 def setup_logging():
     """Configure logging."""
@@ -185,15 +186,22 @@ def evaluate_split(dataset: Dataset,
 
 
 def main():
+    # Setup argument parser
+    parser = argparse.ArgumentParser(description='Evaluate fine-tuned ASR model with language model')
+    parser.add_argument('--model_path', type=str, required=True,
+                       help='Path to the trained model checkpoint')
+    parser.add_argument('--lm_path', type=str, required=True,
+                       help='Path to the KenLM language model (.bin file)')
+    
+    args = parser.parse_args()
+    
     # Setup logging
     setup_logging()
     logging.info("Starting evaluation script...")
 
     # Configuration
-    #model_path = "./inprogress/baseline/facebook/w2v-bert-2.0-20062025-203510/checkpoint-2400"  
-    #model_path = "./inprogress/current_best/checkpoint-13200/"
-    #model_path = "./inprogress/baseline/facebook/w2v-bert-2.0-22062025-210026"
-    model_path = "inprogress/baseline/facebook/w2v-bert-2.0-23062025-130024"
+    model_path = args.model_path
+    lm_path = args.lm_path
 
     print(f"Loading trained model from {model_path}...")
     model, processor, device = load_model(model_path)
@@ -206,12 +214,11 @@ def main():
         for k, v in sorted(vocab_dict.items(), key=lambda item: item[1])
     }
 
-
+    print(f"Loading language model from {lm_path}...")
     decoder = build_ctcdecoder(
         labels=list(sorted_vocab_dict.keys()),
-        kenlm_model_path="./kinyarwanda-ASR/kenLM/2gram.arpa",
+        kenlm_model_path=lm_path,
     )
-
 
     processor_with_lm = Wav2Vec2ProcessorWithLM(
         feature_extractor=processor.feature_extractor,
@@ -323,6 +330,19 @@ EVALUATION SUMMARY
 ==================================================
 Split  Samples  WER (%)  CER (%) Score (%)
  test    16213 39.6027% 12.5244%  76.6443%
+
+
+validation Results:
+  WER: 0.0847 (8.4698%)
+  CER: 0.0199 (1.9907%)
+  Score: 95.4177%
+
+==================================================
+EVALUATION SUMMARY
+==================================================
+     Split  Samples WER (%) CER (%) Score (%)
+validation     4632 8.4698% 1.9907%  95.4177%
+
 
 
 """

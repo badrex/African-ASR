@@ -13,7 +13,7 @@ def clean_text(text):
     #text = text.replace('．', '.')
     
     # keep only allowed characters
-    allowed = "abcdefghijklmnopqrstuvwxyz \'" # \'
+    allowed = "abcdefghijklmnopqrstuvwxyz \'" 
     text = ''.join(c for c in text if c.lower() in allowed)
     
     # normalize whitespace
@@ -45,27 +45,27 @@ def extract_all_chars(batch: Dict[str, List[str]]) -> Dict[str, List[Any]]:
     return {"vocab": [vocab], "all_text": [all_text]}
 
 
-def create_vocabulary(dataset: Dataset) -> Dict[str, int]:
-    """Create vocabulary dictionary from dataset.
+# def create_vocabulary(dataset: Dataset) -> Dict[str, int]:
+#     """Create vocabulary dictionary from dataset.
     
-    Args:
-        dataset: Dataset containing text to build vocabulary from
+#     Args:
+#         dataset: Dataset containing text to build vocabulary from
         
-    Returns:
-        Dictionary mapping characters to integer indices
-    """
-    # Extract unique characters
-    vocab_list = dataset["vocab"][0]
-    vocab_dict = {v: k for k, v in enumerate(sorted(vocab_list))}
+#     Returns:
+#         Dictionary mapping characters to integer indices
+#     """
+#     # Extract unique characters
+#     vocab_list = dataset["vocab"][0]
+#     vocab_dict = {v: k for k, v in enumerate(sorted(vocab_list))}
     
-    # Handle special tokens
-    vocab_dict["|"] = vocab_dict[" "]
-    del vocab_dict[" "]
+#     # Handle special tokens
+#     vocab_dict["|"] = vocab_dict[" "]
+#     del vocab_dict[" "]
     
-    vocab_dict["[UNK]"] = len(vocab_dict)
-    vocab_dict["[PAD]"] = len(vocab_dict)
+#     vocab_dict["[UNK]"] = len(vocab_dict)
+#     vocab_dict["[PAD]"] = len(vocab_dict)
     
-    return vocab_dict
+#     return vocab_dict
 
 
 # def prepare_dataset(batch: Dict[str, Any], processor) -> Dict[str, Any]:

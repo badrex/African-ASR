@@ -6,7 +6,8 @@ from transformers import Wav2Vec2ForCTC, AutoModelForCTC, Wav2Vec2Processor
 from src.utils.config import ASRConfig
 
 
-def create_asr_model(config: ASRConfig, processor: Wav2Vec2Processor) -> Wav2Vec2ForCTC:
+def create_asr_model(config: ASRConfig, 
+                     processor: Wav2Vec2Processor) -> Wav2Vec2ForCTC:
     """
     Create and configure a Wav2Vec2 ASR model.
     
@@ -23,11 +24,11 @@ def create_asr_model(config: ASRConfig, processor: Wav2Vec2Processor) -> Wav2Vec
     # Initialize model
     model = AutoModelForCTC.from_pretrained(
         pretrained_model_path,
-        attention_dropout=0.00,
-        hidden_dropout=0.00,
-        feat_proj_dropout=0.00,
+        attention_dropout=0.05,
+        hidden_dropout=0.05,
+        feat_proj_dropout=0.05,
         mask_time_prob=0.05,
-        layerdrop=0.0,
+        layerdrop=0.025,
         ctc_loss_reduction="mean",
         pad_token_id=processor.tokenizer.pad_token_id,
         vocab_size=len(processor.tokenizer),

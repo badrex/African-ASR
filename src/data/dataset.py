@@ -48,7 +48,7 @@ def load_datasets(config: ASRConfig) -> Tuple[Dataset, Dataset]:
         )
     
     train_dataset = dataset[config.train_split]
-    eval_dataset = dataset[config.eval_split]
+    dev_dataset = dataset[config.eval_split]
 
     # Remove unwanted features
     features_to_remove = [
@@ -58,11 +58,11 @@ def load_datasets(config: ASRConfig) -> Tuple[Dataset, Dataset]:
     # Sample dataset if specified
     if config.sample:
         train_dataset = train_dataset.select(range(config.sample_size))
-        eval_dataset = eval_dataset.select(range(config.sample_size))
+        dev_dataset = dev_dataset.select(range(config.sample_size))
     
     # Remove columns and clean text
     train_dataset = train_dataset.remove_columns(features_to_remove)
-    eval_dataset = eval_dataset.remove_columns(features_to_remove)
+    dev_dataset = dev_dataset.remove_columns(features_to_remove)
     
     # Preprocess text transcripts by removing special characters
     train_dataset = train_dataset.map(
@@ -70,17 +70,17 @@ def load_datasets(config: ASRConfig) -> Tuple[Dataset, Dataset]:
         batched=True,
         batch_size=1000,
     )
-    eval_dataset = eval_dataset.map(
+    dev_dataset = dev_dataset.map(
         lambda batch: clean_text_batch(batch),
         batched=True,
         batch_size=1000,
     )
     
-    return train_dataset, eval_dataset
+    return train_dataset, dev_dataset
 
 
 def build_vocabulary(train_dataset: Dataset,
-                     test_dataset: Dataset,
+                     dev_dataset: Dataset,
                      output_path: str = "./vocab.json") -> Dict[str, int]:
     """Build vocabulary from datasets and save it to a file.
     
@@ -93,7 +93,7 @@ def build_vocabulary(train_dataset: Dataset,
         Vocabulary dictionary
     """
     # Extract all characters
-    vocab_train = train_dataset.map(
+    train_vocab = train_dataset.map(
         extract_all_chars,
         batched=True,
         batch_size=-1,
@@ -101,16 +101,16 @@ def build_vocabulary(train_dataset: Dataset,
         remove_columns=train_dataset.column_names
     )
     
-    vocab_test = test_dataset.map(
+    dev_vocab = dev_dataset.map(
         extract_all_chars,
         batched=True,
         batch_size=-1,
         keep_in_memory=True,
-        remove_columns=test_dataset.column_names
+        remove_columns=dev_dataset.column_names
     )
     
     # Combine vocabularies
-    vocab_list = list(set(vocab_train["vocab"][0]) | set(vocab_test["vocab"][0]))
+    vocab_list = list(set(train_vocab["vocab"][0]) | set(dev_vocab["vocab"][0]))
     vocab_dict = {v: k for k, v in enumerate(sorted(vocab_list))}
     
     # Add special tokens
@@ -127,9 +127,11 @@ def build_vocabulary(train_dataset: Dataset,
     return vocab_dict
 
 
+ASRProcessor = Union[Wav2Vec2Processor, Wav2Vec2BertProcessor]
+
 def create_processor(
         config: ASRConfig, 
-        vocab_path: str = "./vocab") -> Union[Wav2Vec2Processor, Wav2Vec2BertProcessor]:
+        vocab_path: str = "./vocab") -> ASRProcessor:
     """Create a processor from tokenizer and feature extractor.
     
     Args:

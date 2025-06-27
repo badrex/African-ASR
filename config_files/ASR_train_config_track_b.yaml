@@ -1,0 +1,33 @@
+# Project settings
+project: "Kinyarwanda-ASR"
+output_dir: "inprogress/baseline"
+seed: 42
+
+# Model settings
+pretrained_model: "facebook/w2v-bert-2.0"
+freeze_feature_encoder: true
+
+# Training settings
+batch_size: 4
+gradient_accumulation_steps: 8
+num_epochs: 25
+max_steps: 16000
+learning_rate: 0.00005 #0.00005
+warmup_ratio: 0.1
+fp16: true
+gradient_checkpointing: true
+save_steps: 800
+eval_steps: 800
+logging_steps: 5
+save_total_limit: 2
+
+# Data settings
+use_custom_dataset: true
+dataset_path: "./kinyarwanda-ASR/kinyarwanda_asr_dataset_1000"
+train_split: "train"
+eval_split: "validation"
+
+# Data preprocessing settings
+sample: false # for debugging purposes, set to true for training on sample data
+sample_size: 1000 # not used if sample is false
+#include_apstrophes: true
