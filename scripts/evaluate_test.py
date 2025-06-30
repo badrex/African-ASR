@@ -9,6 +9,7 @@ import warnings
 warnings.filterwarnings("ignore")
 from typing import Tuple
 import logging
+import argparse
 
 def setup_logging():
     """configure logging."""
@@ -62,7 +63,7 @@ def run_inference(dataset_path: str,
                   output_file: str):
     
     """run inference on test split and save predictions to CSV"""
-    logging.info("Starting inference...")
+    logging.info("Starting inference on a specific test split...")
 
     # load dataset
     logging.info(f"Loading dataset {dataset_path}...")
@@ -85,7 +86,7 @@ def run_inference(dataset_path: str,
         audio_id = value['audio_path'].split('/')[-1].split('-')[0]  # extract timestamp
         audio_id_to_key[audio_id] = key
     
-    print("Loading trained model...")
+    print(f"Loading trained model from {model_path}...")
     model, processor, device = load_model(model_path)
     print(f"Model loaded on device: {device}")
     
@@ -133,25 +134,23 @@ def main():
     setup_logging()
     logging.info("Starting inference script...")
 
-    # configuration
-    model_path = "./inprogress/baseline/facebook/w2v-bert-2.0-22062025-210026" # "./inprogress/current_best/checkpoint-6800/"
-    dataset_path = "./kinyarwanda-ASR/kinyarwanda_asr_dataset"
-    metadata_file = "./kinyarwanda-ASR/metadata/test.json"
-    output_file = "./kinyarwanda-ASR/predictions_2.csv"
+    # argument parser
+    parser = argparse.ArgumentParser(description='Evaluate ASR model on test set')
+    parser.add_argument('--model_path', type=str, required=True, 
+                        help='Path to the trained model checkpoint')
+                        
+    parser.add_argument('--dataset_path', type=str, required=True, 
+                        help='Path to the dataset directory')
 
-    run_inference(dataset_path, model_path, metadata_file, output_file)
+    parser.add_argument('--metadata_file', type=str, required=True, 
+                        help='Path to the metadata JSON file')
+                        
+    parser.add_argument('--output_file', type=str, required=True, 
+                        help='Path to save the predictions CSV')
+                        
+    args = parser.parse_args()
+
+    run_inference(args.dataset_path, args.model_path, args.metadata_file, args.output_file)
 
 if __name__ == "__main__":
     main()
-
-
-"""
-# create mapping from audio_id to json key
-audio_id_to_key = {}
-for key, value in metadata.items():
-    audio_id = value['audio_path'].split('/')[-1].split('-')[0]  # extract timestamp
-    audio_id_to_key[audio_id] = key
-
-# in your loop:
-json_key = audio_id_to_key.get(sample['audio_id'], "unknown")
-"""

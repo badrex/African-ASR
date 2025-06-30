@@ -4,7 +4,7 @@ output_dir: "inprogress/baseline"
 seed: 42
 
 # Model settings
-pretrained_model: "facebook/w2v-bert-2.0"
+pretrained_model: "facebook/mms-1b" #"facebook/w2v-bert-2.0"
 freeze_feature_encoder: true
 
 # Training settings
