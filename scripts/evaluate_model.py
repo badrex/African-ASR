@@ -74,11 +74,14 @@ def transcribe_audio(audio_array: Audio,
     with torch.no_grad():
         logits = model(**inputs).logits
 
-    
-    predicted_ids = logits.cpu().numpy() #.argmax(dim=-1)
-    transcription = processor.batch_decode(predicted_ids)
+    predicted_ids = torch.argmax(logits, dim=-1)
 
-    return transcription[0][0].strip()
+    transcription = processor.batch_decode(
+        predicted_ids, 
+        skip_special_tokens=True # this should ignore special tokens like [PAD]
+    )
+
+    return transcription[0].strip()
 
 
 def evaluate_split(eval_dataset: Dataset, 
@@ -194,8 +197,6 @@ def main():
     parser = argparse.ArgumentParser(description='Evaluate fine-tuned ASR model with language model')
     parser.add_argument('--model_path', type=str, required=True,
                        help='Path to the trained model checkpoint')
-    parser.add_argument('--lm_path', type=str, required=True,
-                       help='Path to the KenLM language model (.bin file)')
     parser.add_argument('--dataset_path', type=str, required=True,
                        help='Path to the dataset directory (e.g., kinyarwanda_asr_dataset)')
     parser.add_argument('--split', type=str, required=True,
@@ -209,7 +210,6 @@ def main():
 
     # Configuration
     model_path = args.model_path
-    lm_path = args.lm_path
     dataset_path = args.dataset_path
     split = args.split
     
@@ -217,28 +217,6 @@ def main():
     model, processor, device = load_model(model_path)
     logging.info(f"Model loaded on device: {device}")
 
-    # print tpye of LM
-    logging.info(f"Decoder LM: {lm_path}")
-    vocab_dict = processor.tokenizer.get_vocab()
-    sorted_vocab_dict = {
-        k.lower(): v 
-        for k, v in sorted(vocab_dict.items(), key=lambda item: item[1])
-    }
-
-    logging.info(f"Initializing CTC decoder with with LM {lm_path}...")
-    decoder = build_ctcdecoder(
-        labels=list(sorted_vocab_dict.keys()),
-        kenlm_model_path=lm_path,
-        alpha=0.5,
-        beta=1.5, # tunning this hyperparameter did not improve the results
-    )
-
-    logging.info(f"Initializing processor with LM...")
-    processor_with_lm = Wav2Vec2ProcessorWithLM(
-        feature_extractor=processor.feature_extractor,
-        tokenizer=processor.tokenizer,
-        decoder=decoder
-    )
 
     text_column = 'transcription' 
 
@@ -254,7 +232,7 @@ def main():
     results = {}
     
     results[split] = evaluate_split(
-        dataset, model, processor_with_lm, device, text_column, split
+        dataset, model, processor, device, text_column, split
     )
 
     
