@@ -28,6 +28,7 @@ def process_split(json_path, audio_dir, split_name):
     missing_audio_ids = []
     
     print(f"\nprocessing {split_name} split...")
+
     for record_id, record in tqdm(data.items(), desc=f"{split_name}"):
         try:
             # extract audio id and build file path
@@ -49,7 +50,7 @@ def process_split(json_path, audio_dir, split_name):
             
             # create record
             processed_record = {
-                'audio_id': audio_id,
+                'audio_id': record_id,
                 'audio': audio_file_path,
                 'audio_duration': duration,
                 'gender': record['gender'],
@@ -75,7 +76,7 @@ def process_split(json_path, audio_dir, split_name):
 
 def create_hf_dataset():
     """create hugging face dataset"""
-    metadata_dir = './metadata'
+    metadata_dir = './data/metadata'
     audio_dir = './data/converted_audio'
     
     # process each split
@@ -108,6 +109,12 @@ if __name__ == "__main__":
     dataset = create_hf_dataset()
     
     # save dataset
-    dataset.save_to_disk('./kinyarwanda_asr_dataset')
-    print("dataset saved to ./kinyarwanda_asr_dataset")
+    dataset_path = './kinyarwanda-asr-500h'
+    dataset.save_to_disk(dataset_path)
+    print(f"dataset saved to {dataset_path}")
 
+    # dataset.push_to_hub(
+    #         "badrex/kinyarwanda-speech-500h", 
+    #         private=True,
+    #         token="your_hf_token"
+    # )
