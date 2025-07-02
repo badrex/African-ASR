@@ -33,19 +33,19 @@ def load_datasets(config: ASRConfig) -> Tuple[Dataset, Dataset]:
     # Load custom dataset if specified
     if hasattr(config, 'use_custom_dataset') and config.use_custom_dataset:
         if hasattr(config, 'dataset_path') and config.dataset_path:
-            logging.info(f"Loading custom training dataset from "
+            logging.info(f"Loading custom training dataset locally from "
                          f"{config.dataset_path}...")
             
             dataset = DatasetDict.load_from_disk(config.dataset_path)
 
         else:
-            raise ValueError(f"dataset_path must be specified "
+            raise ValueError(f"dataset_path to a local dataset must be specified "
                              f"when use_custom_dataset is True")
     else:
-        # not implemented yet
-        raise NotImplementedError(
-            "Loading from HuggingFace datasets is not implemented yet"
-        )
+        # Load dataset from HF hub
+        logging.info(f"Loading training dataset from HF hub from "
+                     f"{config.dataset_path}...")
+        dataset = load_dataset(config.dataset_path)
     
     train_dataset = dataset[config.train_split]
     dev_dataset = dataset[config.eval_split]

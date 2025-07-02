@@ -10,8 +10,8 @@ freeze_feature_encoder: false
 
 # Training settings
 batch_size: 4
-gradient_accumulation_steps: 8
-num_epochs: 25
+gradient_accumulation_steps: 8 # thus effective batch size is 32
+num_epochs: 25 # this does not matter if max_steps is set
 max_steps: 300
 learning_rate: 0.00005
 warmup_ratio: 0.1
@@ -23,13 +23,15 @@ logging_steps: 5
 save_total_limit: 2
 
 # Data settings
-use_custom_dataset: true
-dataset_path: "./kinyarwanda-ASR/kinyarwanda_asr_dataset"
+# if use_custom_dataset is true, then dataset_path is the path to the custom dataset on disk
+# if use_custom_dataset is false, then dataset_path is the dataset repo name on the HF hub
+use_custom_dataset: false
+dataset_path: "badrex/kinyarwanda-speech-sample"
 train_split: "train"
 eval_split: "validation"
 
-# Data preprocessing settings
-sample: true
+# Data sampling settings (for debugging purposes)
+sample: false
 sample_size: 1000 # not used if sample is false
 #include_apstrophes: true
 
