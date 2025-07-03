@@ -22,12 +22,14 @@ logging_steps: 5
 save_total_limit: 2
 
 # Data settings
-use_custom_dataset: true
-dataset_path: "./kinyarwanda-ASR/kinyarwanda_asr_dataset_1000"
+# if use_custom_dataset is true, then dataset_path is the path to the custom dataset on disk
+# if use_custom_dataset is false, then dataset_path is the dataset repo name on the HF hub
+use_custom_dataset: false
+dataset_path: "badrex/kinyarwanda-speech-1000h"
 train_split: "train"
 eval_split: "validation"
 
-# Data preprocessing settings
-sample: false # for debugging purposes, set to true for training on sample data
+# Data sampling settings (for debugging purposes)
+sample: false
 sample_size: 1000 # not used if sample is false
 #include_apstrophes: true

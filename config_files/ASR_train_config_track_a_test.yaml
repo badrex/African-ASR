@@ -1,3 +1,4 @@
+# This file is identical to ASR_train_config.yaml, but with a smaller sample size for testing purposes
 # Project settings
 project: "Kinyarwanda-ASR"
 output_dir: "inprogress/baseline"
@@ -5,32 +6,33 @@ seed: 42
 
 # Model settings
 pretrained_model: "facebook/w2v-bert-2.0"
-freeze_feature_encoder: true
+freeze_feature_encoder: false
 
 # Training settings
 batch_size: 4
-gradient_accumulation_steps: 8
-num_epochs: 25
-max_steps: 16000
-learning_rate: 0.00007 #0.00005
+gradient_accumulation_steps: 8 # thus effective batch size is 32
+num_epochs: 25 # this does not matter if max_steps is set
+max_steps: 300
+learning_rate: 0.00005
 warmup_ratio: 0.1
 fp16: true
 gradient_checkpointing: true
-save_steps: 400
-eval_steps: 400
+save_steps: 100
+eval_steps: 100
 logging_steps: 5
 save_total_limit: 2
 
 # Data settings
 # if use_custom_dataset is true, then dataset_path is the path to the custom dataset on disk
 # if use_custom_dataset is false, then dataset_path is the dataset repo name on the HF hub
-use_custom_dataset: false
+use_custom_dataset: true
 # if from HF hub, use the repo name badrex/kinyarwanda-speech-500h
-dataset_path: "badrex/kinyarwanda-speech-500h" #"./kinyarwanda-ASR/kinyarwanda_asr_dataset" 
+dataset_path: "./kinyarwanda_asr_dataset" 
 train_split: "train"
 eval_split: "validation"
 
 # Data sampling settings (for debugging purposes)
-sample: false
+sample: true
 sample_size: 1000 # not used if sample is false
 #include_apstrophes: true
+

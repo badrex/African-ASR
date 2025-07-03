@@ -132,7 +132,7 @@ def prepare_dataset(batch: Dict[str, Any], processor) -> Dict[str, Any]:
         features = features.input_values[0]
     
     batch[key] = features
-    batch["input_length"] = len(features)
+    batch["length"] = len(features)
     batch["labels"] = processor(text=batch["clean_transcription"]).input_ids
     
     return batch
