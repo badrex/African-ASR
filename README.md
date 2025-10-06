@@ -1,6 +1,6 @@
 # African-ASR
 
-Build CTC-based Automatic Speech Recognition (ASR) Systems for African languages.  
+Develop Automatic Speech Recognition (ASR) Systems for African languages by fine-tuning multilingual speech models using CTC loss .  
 This repository provides training scripts and configurations to build ASR models using [🤗 Hugging Face Transformers](https://huggingface.co/transformers/) and related libraries.
 
 ---
@@ -13,11 +13,11 @@ This repository provides training scripts and configurations to build ASR models
 ---
 
 ## 📦 Requirements
-Make sure you have:
+
 - Python 3.8+
 - PyTorch (with GPU support recommended)
 - Hugging Face Transformers, Datasets, and Tokenizers
-- Other dependencies listed in your `requirements.txt` (if available)
+- Other dependencies listed in `requirements.txt` 
 
 
 Install the dependencies:
