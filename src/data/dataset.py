@@ -15,7 +15,8 @@ from transformers import (
 from src.data.preprocessing import (
     clean_text_batch, 
     extract_all_chars, 
-    prepare_dataset
+    prepare_dataset, 
+    prepare_dataset_batch
 )
 
 from src.utils.config import ASRConfig
@@ -45,35 +46,47 @@ def load_datasets(config: ASRConfig) -> Tuple[Dataset, Dataset]:
         # Load dataset from HF hub
         logging.info(f"Loading training dataset from HF hub from "
                      f"{config.dataset_path}...")
-        dataset = load_dataset(config.dataset_path)
+        dataset = load_dataset(
+            config.dataset_path,
+            verification_mode="no_checks", 
+        )
     
     train_dataset = dataset[config.train_split]
     dev_dataset = dataset[config.eval_split]
 
     # Remove unwanted features
-    features_to_remove = [
-        "audio_id", "gender", "age_group", "category", 
-    ]
+    #features_to_remove = [
+    #    "audio_id", "gender", "age_group", "category", 
+    #]
     
     # Sample dataset if specified
     if config.sample:
+        logging.info(f"Sampling dataset to {config.sample_size} samples...")
         train_dataset = train_dataset.select(range(config.sample_size))
-        dev_dataset = dev_dataset.select(range(config.sample_size))
+        #dev_dataset = dev_dataset.select(range(3989))
     
-    # Remove columns and clean text
+    # Remove features not used in training 
+    logging.info(f"Removing unnecessary columns...")
+    features_to_keep = [
+        "audio", "transcription", "audio_duration",
+    ]
+
+    features_to_remove = [f for f in train_dataset.features if f not in features_to_keep]
+
     train_dataset = train_dataset.remove_columns(features_to_remove)
     dev_dataset = dev_dataset.remove_columns(features_to_remove)
     
     # Preprocess text transcripts by removing special characters
+    logging.info(f"Preprocessing text transcripts...")
     train_dataset = train_dataset.map(
         lambda batch: clean_text_batch(batch),
         batched=True,
-        batch_size=1000,
+        batch_size=256,
     )
     dev_dataset = dev_dataset.map(
         lambda batch: clean_text_batch(batch),
         batched=True,
-        batch_size=1000,
+        batch_size=256,
     )
     
     return train_dataset, dev_dataset
@@ -203,14 +216,30 @@ def prepare_datasets(train_dataset: Dataset,
     # test_dataset = test_dataset.cast_column("audio", Audio(sampling_rate=16_000))
     
     # Prepare datasets
+    # train_dataset = train_dataset.map(
+    #     lambda batch: prepare_dataset(batch, processor),
+    #     num_proc=8,
+    #     remove_columns=train_dataset.column_names
+    # )
+    
+    # eval_dataset = eval_dataset.map(
+    #     lambda batch: prepare_dataset(batch, processor),
+    #     num_proc=8,
+    #     remove_columns=eval_dataset.column_names
+    # )
+
     train_dataset = train_dataset.map(
-        lambda batch: prepare_dataset(batch, processor),
+        lambda batch: prepare_dataset_batch(batch, processor),
+        batched=True,
+        batch_size=32, # has to be based on available memory
         remove_columns=train_dataset.column_names
     )
-    
+
     eval_dataset = eval_dataset.map(
-        lambda batch: prepare_dataset(batch, processor),
+        lambda batch: prepare_dataset_batch(batch, processor),
+        batched=True,
+        batch_size=32, # has to be based on available memory
         remove_columns=eval_dataset.column_names
-    )
+    )   
     
     return train_dataset, eval_dataset

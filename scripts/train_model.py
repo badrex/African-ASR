@@ -148,7 +148,8 @@ def main():
     # disabled seed for huggingface because it causes issues with cache access
     # TODO: investigate why this is happening
     #huggingface_set_seed(config.seed)
-    
+
+
     # Login to wandb
     logging.info("Logging in to Weights & Biases...")
     if os.environ.get("WANDB_API_KEY"):
@@ -216,6 +217,17 @@ def main():
     # Create model
     logging.info(f"Creating model from {config.pretrained_model}...")
     model = create_asr_model(config, processor)
+
+    # check if distributed training is available
+    if torch.cuda.device_count() > 1:
+        logging.info(f"Using {torch.cuda.device_count()} GPUs")
+        #model._set_static_graph()
+        # Initialize distributed training
+        #torch.distributed.init_process_group(backend='nccl')
+        #local_rank = torch.distributed.get_rank()
+        #torch.cuda.set_device(local_rank)
+        #logging.info(f"Using GPU {local_rank} for training")
+        #logging.info(f"Training on {torch.cuda.get_device_name(local_rank)}")
     
     # Create data collator
     data_collator = DataCollatorCTCWithPadding(

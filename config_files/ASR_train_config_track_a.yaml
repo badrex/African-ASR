@@ -11,13 +11,13 @@ freeze_feature_encoder: true
 batch_size: 4
 gradient_accumulation_steps: 8
 num_epochs: 25
-max_steps: 16000
-learning_rate: 0.00007 #0.00005
-warmup_ratio: 0.1
+max_steps: 42000
+learning_rate: 0.00007 #0.00005 #0.00005
+warmup_ratio: 0.05
 fp16: true
 gradient_checkpointing: true
-save_steps: 400
-eval_steps: 400
+save_steps: 800
+eval_steps: 800
 logging_steps: 5
 save_total_limit: 2
 
@@ -26,7 +26,7 @@ save_total_limit: 2
 # if use_custom_dataset is false, then dataset_path is the dataset repo name on the HF hub
 use_custom_dataset: false
 # if from HF hub, use the repo name badrex/kinyarwanda-speech-500h
-dataset_path: "badrex/kinyarwanda-speech-500h" #"./kinyarwanda-ASR/kinyarwanda_asr_dataset" 
+dataset_path: "badrex/kinyarwanda-speech-1000h" #"./kinyarwanda-ASR/kinyarwanda_asr_dataset" 
 train_split: "train"
 eval_split: "validation"
 

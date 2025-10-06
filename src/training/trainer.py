@@ -36,14 +36,18 @@ def create_training_args(config: ASRConfig, experiment_name: str) -> TrainingArg
     
     return TrainingArguments(
         output_dir=output_dir,
-        group_by_length=True,
+        group_by_length=True, # important for efficient training
         per_device_train_batch_size=config.batch_size,
         gradient_accumulation_steps=config.gradient_accumulation_steps,
+        dataloader_num_workers=4,  # increase for multi-GPU
+        ddp_find_unused_parameters=True, # this is the key parameter for distributed training
+        #ddp_backend="nccl",
+        fp16=True,  # Enable mixed precision
+        #dataloader_pin_memory=False,
         eval_strategy="steps",
-        num_train_epochs=num_train_epochs,  # Always a number, never None
+        num_train_epochs=num_train_epochs,  # always a number, never None
         max_steps=max_steps,
         gradient_checkpointing=config.gradient_checkpointing,
-        fp16=config.fp16,
         adam_beta1=0.9,
         adam_beta2=0.98,
         adam_epsilon=1e-08,

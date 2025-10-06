@@ -1,5 +1,6 @@
 # src/data/preprocessing.py
 import re
+import unicodedata
 from typing import Dict, List, Any
 from datasets import Dataset
 from transformers import Wav2Vec2Processor, Wav2Vec2BertProcessor
@@ -11,9 +12,34 @@ def clean_text(text):
     #text = text.replace('\xa0', ' ')
     #text = text.replace('，', ' ')  # remove chinese comma
     #text = text.replace('．', '.')
-    
+    #text = text.replace("’", "'")
+    text = text.replace("’", "'").replace("ʼ", "'")
+
+    # simple replacements for lowercase accented characters
+    # this is only for Fulani
+    replacements = {
+        "á": "a", "à": "a", "â": "a", "ä": "a", "ã": "a", "å": "a", "ā": "a",
+        "é": "e", "è": "e", "ê": "e", "ë": "e", "ē": "e",
+        "í": "i", "ì": "i", "î": "i", "ï": "i", "ī": "i",
+        "ó": "o", "ò": "o", "ô": "o", "ö": "o", "õ": "o", "ō": "o",
+        "ú": "u", "ù": "u", "û": "u", "ü": "u", "ū": "u",
+        "ç": "c",
+        "ñ": "n",
+        "ÿ": "y",
+    }
+
+    for src, tgt in replacements.items():
+        text = text.replace(src, tgt)
+
     # keep only allowed characters
-    allowed = "abcdefghijklmnopqrstuvwxyz \'" 
+    # allowed = "abcdefghijklmnopqrstuvwxyz \'" 
+    #allowed = " abcdefghijklmnopqrstuvwxyz0123456789\'"
+    #allowed = "abcdefghijklmnopqrstuvwxyzĩũ \'"
+    # this is only for Fulani
+    allowed = "abcdefghijklmnopqrstuvwxyzɓɗƴŋɲ '"
+
+    text = unicodedata.normalize("NFC", text)
+
     text = ''.join(c for c in text if c.lower() in allowed)
     
     # normalize whitespace
@@ -134,5 +160,41 @@ def prepare_dataset(batch: Dict[str, Any], processor) -> Dict[str, Any]:
     batch[key] = features
     batch["length"] = len(features)
     batch["labels"] = processor(text=batch["clean_transcription"]).input_ids
+    
+    return batch
+
+# batch implementation
+def prepare_dataset_batch(batch: Dict[str, List[Any]], processor) -> Dict[str, List[Any]]:
+    """
+    Prepare dataset batch for training by processing audio and tokenizing text.
+    
+    Args:
+        batch: Dictionary containing batch data
+        processor: 
+            Wav2Vec2Processor/Wav2Vec2BertProcessor for audio/text processing
+        
+    Returns:
+        Processed batch ready for model input
+    """
+    # process multiple samples at once
+    audio_arrays = [audio["array"] for audio in batch["audio"]]
+    sampling_rates = [audio["sampling_rate"] for audio in batch["audio"]]
+    
+    # process all audio at once if possible
+    features = processor(audio_arrays, sampling_rate=sampling_rates[0])
+    
+    is_w2vBERT = isinstance(processor, Wav2Vec2BertProcessor)
+    if is_w2vBERT:
+        key = "input_features"
+        batch[key] = features.input_features
+    else:
+        key = "input_values"
+        batch[key] = features.input_values
+    
+    batch["length"] = [len(f) for f in batch[key]]
+    
+    # tokenize all texts at once
+    labels = processor(text=batch["clean_transcription"]).input_ids
+    batch["labels"] = labels
     
     return batch

@@ -1,23 +1,23 @@
 # Project settings
-project: "Kinyarwanda-ASR"
-output_dir: "inprogress/baseline"
+project: "Fulani-ASR"
+output_dir: "inprogress/fulani-ASR"
 seed: 42
 
 # Model settings
-pretrained_model: "facebook/w2v-bert-2.0"
+pretrained_model: "facebook/w2v-bert-2.0"  #"facebook/mms-300m"  #"facebook/w2v-bert-2.0"
 freeze_feature_encoder: true
 
 # Training settings
 batch_size: 4
 gradient_accumulation_steps: 8
 num_epochs: 25
-max_steps: 32000
-learning_rate: 0.00005 #0.00005
-warmup_ratio: 0.05
+max_steps: 16000
+learning_rate: 0.00009
+warmup_ratio: 0.1
 fp16: true
 gradient_checkpointing: true
-save_steps: 400
-eval_steps: 400
+save_steps: 800
+eval_steps: 800
 logging_steps: 5
 save_total_limit: 2
 
@@ -26,11 +26,11 @@ save_total_limit: 2
 # if use_custom_dataset is false, then dataset_path is the dataset repo name on the HF hub
 use_custom_dataset: false
 # if from HF hub, use the repo name badrex/kinyarwanda-speech-500h
-dataset_path: "badrex/kinyarwanda-speech-sample" #"./kinyarwanda-ASR/kinyarwanda_asr_dataset" 
+dataset_path: "badrex/fulani-speech" #"badrex/swahili-speech-400hr" #"./kinyarwanda-ASR/kinyarwanda_asr_dataset" 
 train_split: "train"
 eval_split: "validation"
 
 # Data sampling settings (for debugging purposes)
 sample: false
-sample_size: 1000 # not used if sample is false
+sample_size: 1800 #124583 #16890 #33760 #64541 # not used if sample is false # 100hr > 16890, 50hr > 8450, 10hr > 1700, 1hr > 180
 #include_apstrophes: true

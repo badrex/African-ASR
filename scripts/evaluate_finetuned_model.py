@@ -1,10 +1,8 @@
 #!/usr/bin/env python3
 
-import os
 import torch
-from transformers import AutoProcessor, AutoModelForCTC, Wav2Vec2ProcessorWithLM
-from pyctcdecode import build_ctcdecoder
-from datasets import load_from_disk, load_dataset, Audio, Dataset
+from transformers import AutoProcessor, AutoModelForCTC
+from datasets import load_from_disk, Audio, Dataset
 import jiwer
 import pandas as pd
 from tqdm import tqdm
@@ -14,8 +12,6 @@ import evaluate
 import re
 from typing import Dict, List, Any, Tuple
 import logging
-import argparse
-
 
 def setup_logging():
     """Configure logging."""
@@ -78,13 +74,13 @@ def transcribe_audio(audio_array: Audio,
 
     transcription = processor.batch_decode(
         predicted_ids, 
-        skip_special_tokens=False # this should ignore special tokens like [PAD]
+        skip_special_tokens=True # this should ignore special tokens like [PAD]
     )
 
     return transcription[0].strip()
 
 
-def evaluate_split(eval_dataset: Dataset, 
+def evaluate_split(dataset: Dataset, 
                    model: AutoModelForCTC, 
                    processor: AutoProcessor, 
                    device: torch.device,
@@ -92,17 +88,14 @@ def evaluate_split(eval_dataset: Dataset,
                    split_name='validation') -> Dict[str, Any]:
 
     """Evaluate a dataset split and calculate WER/CER"""
+    eval_dataset = dataset
 
-    # check if eval_dataset is empty
-    if not eval_dataset:
-        logging.error(f"No data found for in the eval dataset. "
-              f"Please check the dataset path and the split name.")
-        return {}
+    # if not eval_dataset:
+    #     print(f"No data found for {split_name} split.")
+    #     return {}
 
-    logging.info(f"Processing {len(eval_dataset)} samples...")
+    print(f"Processing {len(eval_dataset)} samples...")
 
-    # initialize metrics
-    logging.info(f"Initializing metrics...")
     wer_metric = evaluate.load("wer")
     cer_metric = evaluate.load("cer")
     
@@ -111,7 +104,7 @@ def evaluate_split(eval_dataset: Dataset,
 
     # resample dataset to 16kHz if needed
     if eval_dataset.features['audio'].sampling_rate != 16000:
-        logging.info(f"Resampling speech to 16kHz...")
+        print(f"Resampling speech to 16kHz...")
 
         eval_dataset = eval_dataset.cast_column(
             "audio", Audio(sampling_rate=16_000)
@@ -120,45 +113,32 @@ def evaluate_split(eval_dataset: Dataset,
     for i, sample in enumerate(tqdm(eval_dataset, desc=f"Transcribing speech.")):
         # Get audio array (should be at 16kHz)
         audio_array = sample['audio']['array']
-
-        audio_id = sample['audio_id']
         
         # Transcribe
         pred_text = transcribe_audio(audio_array, model, processor, device)
 
+        # remove [PAD] tokens from prediction
+        # this is a hack for now, should be investigated and fixed properly
+        #pred_text = pred_text.replace("[PAD]", "").strip()
+
+        #pred_text = transcribe_audio(audio_array, model, processor, device)
+
         # Use cleaned_text as reference
         ref_text = process_text(sample[text_column])
 
-        print("-"*75)
-        print(f"{i} Audio ID: {audio_id}")
-        print(f"{i}  Reference: {ref_text}")
+        print(f"{i} Reference: {ref_text}")
         print(f"{i} Prediction: {pred_text}")
-
-        # compute CER and WER
-        cer = cer_metric.compute(
-            predictions=[pred_text],
-            references=[ref_text]
-        )
-        wer = wer_metric.compute(
-            predictions=[pred_text],
-            references=[ref_text]
-        )
-
-        print(f"{i} CER: {cer*100:.4f}%, WER: {wer*100:.4f}%")
 
         predictions.append(pred_text)
         references.append(ref_text)
 
     # print total number of predictions and references
-    print(f"Total predictions: {len(predictions)}, "
-          f"Total references: {len(references)}")
+    print(f"Total predictions: {len(predictions)}, Total references: {len(references)}")
 
-    # check for empty references. Empty references can be problematic for the metrics
-    print(f"Checking for empty references...")
     for i in range(len(references)):
         if not references[i]:
-            logging.warning(f"Empty Reference at index {i}: {references[i]}")
-            logging.warning(f"Prediction: {predictions[i]}")
+            print(f"Empty Reference at index {i}: {references[i]}")
+            print(f"Prediction: {predictions[i]}")
 
 
     # Filter out empty predictions and references
@@ -169,23 +149,15 @@ def evaluate_split(eval_dataset: Dataset,
         if ref:
             filtered_predictions.append(pred)
             filtered_references.append(ref)
-            # print(f"Reference: {ref}")
-            # print(f"Prediction: {pred}")
+            #print(f"Reference: {ref}")
+            #print(f"Prediction: {pred}")
 
     # print total number of filtered predictions and references
-    logging.info(f"Filtered predictions: {len(filtered_predictions)}, "
-          f"Filtered references: {len(filtered_references)}")
+    print(f"Filtered predictions: {len(filtered_predictions)}, Filtered references: {len(filtered_references)}")
 
-    # compute metrics
-    wer = wer_metric.compute(
-        predictions=filtered_predictions, 
-        references=filtered_references
-    )
 
-    cer = cer_metric.compute(
-        predictions=filtered_predictions, 
-        references=filtered_references
-    )
+    wer = wer_metric.compute(predictions=filtered_predictions, references=filtered_references)
+    cer = cer_metric.compute(predictions=filtered_predictions, references=filtered_references)
 
     error_rate = (0.4 * wer) + (0.6 * cer)
     score = (1 - error_rate) * 100
@@ -208,41 +180,27 @@ def evaluate_split(eval_dataset: Dataset,
 
 
 def main():
-    # Setup argument parser
-    parser = argparse.ArgumentParser(description='Evaluate fine-tuned ASR model with language model')
-    parser.add_argument('--model_path', type=str, required=True,
-                       help='Path to the trained model checkpoint')
-    parser.add_argument('--dataset_path', type=str, required=True,
-                       help='Path to the dataset directory (e.g., kinyarwanda_asr_dataset)')
-    parser.add_argument('--split', type=str, required=True,
-                       help='Split to evaluate on (e.g., validation, test)')
-    
-    args = parser.parse_args()
-    
     # Setup logging
     setup_logging()
     logging.info("Starting evaluation script...")
 
     # Configuration
-    model_path = args.model_path
-    dataset_path = args.dataset_path
-    split = args.split
-    
-    logging.info(f"Loading trained model from {model_path}...")
+    #model_path = "./inprogress/baseline/facebook/w2v-bert-2.0-20062025-203510/checkpoint-2400"  
+    #model_path = "./inprogress/current_best/checkpoint-13200/"
+    model_path = "./inprogress/baseline/facebook/w2v-bert-2.0-22062025-210026"
+
+    print("Loading trained model from {model_path}...")
     model, processor, device = load_model(model_path)
-    logging.info(f"Model loaded on device: {device}")
 
+    print(f"Model loaded on device: {device}")
 
-    text_column = 'transcription' 
+    dataset_path = "./kinyarwanda-common-voice"
+
+    text_column = 'sentence' #'transcription' 
+    split = 'test' 
 
     logging.info(f"Loading dataset {dataset_path}/{split}...")
-
-    # check if dataset_path is a local path or a HF hub path
-    # check if dataset_path is a local path
-    if os.path.exists(dataset_path):
-        dataset = load_from_disk(dataset_path + f"/{split}")
-    else:
-        dataset = load_dataset(dataset_path, split=split)
+    dataset = load_from_disk(dataset_path + f"/{split}")
 
     results = {}
     
@@ -250,6 +208,14 @@ def main():
         dataset, model, processor, device, text_column, split
     )
 
+    
+    # # If no validation/test splits, evaluate a subset of train split
+    # if not results:
+    #     print("No validation/test splits found. Evaluating subset of train split...")
+    #     train_subset = dataset['train'].select(range(min(1000, len(dataset['train']))))
+    #     results['train_subset'] = evaluate_split(
+    #         train_subset, model, processor, device, 'train_subset'
+    #     )
     
     # make a summary
     print("\n" + "="*50)
@@ -269,6 +235,67 @@ def main():
     summary_df = pd.DataFrame(summary_data)
     print(summary_df.to_string(index=False))
     
+    # # Save detailed results
+    # for split_name, result in results.items():
+    #     results_df = pd.DataFrame({
+    #         'reference': result['references'],
+    #         'prediction': result['predictions']
+    #     })
+    #     results_df.to_csv(f"{split_name}_results.tsv", sep='\t', index=False)
+    #     print(f"\nDetailed results saved to {split_name}_results.csv")
 
 if __name__ == "__main__":
     main()
+
+
+"""
+with skipe_special_tokens=True, the output is:
+==================================================
+EVALUATION SUMMARY
+==================================================
+     Split  Samples  WER (%) CER (%) Score (%)
+validation     4632 18.3810% 3.9781%  90.2607%
+
+without skipe_special_tokens=True, the output is:
+==================================================
+EVALUATION SUMMARY
+==================================================
+     Split  Samples  WER (%) CER (%) Score (%)
+validation     4632 18.3810% 3.9781%  90.2607%
+
+2800
+==================================================
+EVALUATION SUMMARY
+==================================================
+     Split  Samples  WER (%) CER (%) Score (%)
+validation     4632 15.6370% 3.3036%  91.7631%
+
+6800
+==================================================
+EVALUATION SUMMARY
+==================================================
+     Split  Samples  WER (%) CER (%) Score (%)
+validation     4632 11.0892% 2.4881%  94.0715%
+
+13200
+==================================================
+EVALUATION SUMMARY
+==================================================
+     Split  Samples WER (%) CER (%) Score (%)
+validation     4632 9.3677% 2.1123%  94.9855%
+
+
+common voice dataset:
+test Results:
+  WER: 0.3960 (39.6027%)
+  CER: 0.1252 (12.5244%)
+  Score: 76.6443%
+
+==================================================
+EVALUATION SUMMARY
+==================================================
+Split  Samples  WER (%)  CER (%) Score (%)
+ test    16213 39.6027% 12.5244%  76.6443%
+
+
+"""
