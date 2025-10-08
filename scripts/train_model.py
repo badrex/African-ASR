@@ -11,7 +11,7 @@ import random
 import numpy as np
 import torch
 import wandb
-
+from huggingface_hub import login as hf_login
 
 # Disable setting seeds for huggingface because it causes issues with cache access
 #from transformers import set_seed as huggingface_set_seed
@@ -167,7 +167,16 @@ def main():
         logging.warning("WANDB_API_KEY not found in environment variables. "
                         "Weights & Biases logging will be disabled.")
     
-    
+    # log in to huggingface
+    logging.info("Logging in to Hugging Face...")
+    if os.environ.get("HF_API_KEY"):
+        hf_login(token=os.environ["HF_API_KEY"])
+        logging.info("Successfully logged in to Hugging Face 🤗")
+    else:
+        logging.warning("HF_API_KEY not found in environment variables. "
+                        "Hugging Face login will be disabled 😔")
+
+
     # Create output directory
     output_dir = Path(config.output_dir)
     output_dir.mkdir(exist_ok=True, parents=True)
@@ -177,6 +186,12 @@ def main():
     train_dataset, eval_dataset = load_datasets(config)
     logging.info(f"Loaded {len(train_dataset)} training samples "
                  f"and {len(eval_dataset)} test samples")
+
+    # compute the size training data as hours
+    total_num_of_sec = sum([float(x) for x in train_dataset['audio_duration']])
+    num_of_hours = total_num_of_sec/(60*60)
+    logging.info(f"Total number of hours: {num_of_hours:.3f}!")
+
     
     # Build vocabulary
     logging.info("Building vocabulary...")
@@ -207,13 +222,7 @@ def main():
     processor.save_pretrained(model_dir)
 
     logging.info(f"Type of the processor: {type(processor)}")   
-    
-    # Prepare datasets
-    logging.info("Preparing datasets...")
-    train_dataset, eval_dataset = prepare_datasets(
-        train_dataset, eval_dataset, processor
-    )
-    
+
     # Create model
     logging.info(f"Creating model from {config.pretrained_model}...")
     model = create_asr_model(config, processor)
@@ -229,6 +238,13 @@ def main():
         #logging.info(f"Using GPU {local_rank} for training")
         #logging.info(f"Training on {torch.cuda.get_device_name(local_rank)}")
     
+    # Prepare datasets
+    logging.info("Preparing datasets...")
+    train_dataset, eval_dataset = prepare_datasets(
+        train_dataset, eval_dataset, processor
+    )
+    
+
     # Create data collator
     data_collator = DataCollatorCTCWithPadding(
         processor=processor, 
