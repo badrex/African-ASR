@@ -8,6 +8,10 @@ from transformers import Wav2Vec2Processor, Wav2Vec2BertProcessor
 
 def clean_text(text):
     """clean single text string"""
+    
+    # apply NFC normalization
+    text = unicodedata.normalize("NFC", text)
+    
     # replace problematic chars with standard equivalents
     #text = text.replace('\xa0', ' ')
     #text = text.replace('，', ' ')  # remove chinese comma
@@ -35,10 +39,13 @@ def clean_text(text):
     # allowed = "abcdefghijklmnopqrstuvwxyz \'" 
     #allowed = " abcdefghijklmnopqrstuvwxyz0123456789\'"
     #allowed = "abcdefghijklmnopqrstuvwxyzĩũ \'"
+    
     # this is only for Fulani
-    allowed = "abcdefghijklmnopqrstuvwxyzɓɗƴŋɲ '"
+    #allowed = "abcdefghijklmnopqrstuvwxyzɓɗƴŋɲ '"
+    
+    # for Zulu 
+    allowed = "abcdefghijklmnopqrstuvwxyz0123456789 -'"
 
-    text = unicodedata.normalize("NFC", text)
 
     text = ''.join(c for c in text if c.lower() in allowed)
     
