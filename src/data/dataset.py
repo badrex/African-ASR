@@ -76,17 +76,31 @@ def load_datasets(config: ASRConfig) -> Tuple[Dataset, Dataset]:
     train_dataset = train_dataset.remove_columns(features_to_remove)
     dev_dataset = dev_dataset.remove_columns(features_to_remove)
     
+    # remove samples that are longer than a max duration threshold
+    max_duration = 42.0 
+    logging.info("Removing samples that are longer than 40 seconds...")
+    train_dataset = train_dataset.filter(
+        lambda x: x["audio_duration"] < max_duration,
+        desc="Removing long samples in train split"
+    )
+
+    dev_dataset = dev_dataset.filter(
+        lambda x: x["audio_duration"] < max_duration,
+        desc="Removing long samples in dev split"
+    )
+
+
     # Preprocess text transcripts by removing special characters
     logging.info(f"Preprocessing text transcripts...")
     train_dataset = train_dataset.map(
         lambda batch: clean_text_batch(batch),
         batched=True,
-        batch_size=256,
+        batch_size=64,
     )
     dev_dataset = dev_dataset.map(
         lambda batch: clean_text_batch(batch),
         batched=True,
-        batch_size=256,
+        batch_size=64,
     )
     
     return train_dataset, dev_dataset
