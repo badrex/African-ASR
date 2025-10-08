@@ -6,62 +6,98 @@ from datasets import Dataset
 from transformers import Wav2Vec2Processor, Wav2Vec2BertProcessor
 
 
-def clean_text(text):
-    """clean single text string"""
+# Pre-compute accent replacements for better performance (mainly for Fulani)
+_ACCENT_REPLACEMENTS = {
+    "á": "a", "à": "a", "â": "a", "ä": "a", "ã": "a", "å": "a", "ā": "a",
+    "é": "e", "è": "e", "ê": "e", "ë": "e", "ē": "e",
+    "í": "i", "ì": "i", "î": "i", "ï": "i", "ī": "i",
+    "ó": "o", "ò": "o", "ô": "o", "ö": "o", "õ": "o", "ō": "o",
+    "ú": "u", "ù": "u", "û": "u", "ü": "u", "ū": "u",
+    "ç": "c",
+    "ñ": "n",
+    "ÿ": "y",
+}
+
+
+# def clean_text(text, 
+#                allowed_chars="abcdefghijklmnopqrstuvwxyz0123456789 -'", 
+#                apply_accent_replacements=True):
+#     """clean single text string
+    
+#     Args:
+#         text: Text string to clean
+#         allowed_chars: String containing all allowed characters
+#         apply_accent_replacements: Whether to apply accent replacements
+#     Returns:
+#         Cleaned and normalized text string
+#     """
+    
+#     # apply NFC normalization
+#     text = unicodedata.normalize("NFC", text)
+    
+#     # replace problematic chars with standard equivalents
+#     text = text.replace("'", "'").replace("ʼ", "'")
+
+#     # apply accent replacements using pre-computed dictionary
+#     if apply_accent_replacements:
+#         for src, tgt in _ACCENT_REPLACEMENTS.items():
+#             text = text.replace(src, tgt)
+
+#     # keep only allowed characters (convert to set for O(1) lookup)
+#     allowed_set = set(allowed_chars)
+#     text = ''.join(c for c in text if c.lower() in allowed_set)
+    
+#     # normalize whitespace
+#     text = re.sub(r'\s+', ' ', text).strip()
+    
+#     return text.lower()
+    
+
+def clean_text_batch(batch: Dict[str, Any], 
+                     allowed_chars="abcdefghijklmnopqrstuvwxyz0123456789 -'",
+                     apply_accent_replacements=True) -> Dict[str, Any]:
+    """clean text in a batch of data
+    
+    Args:
+        batch: Dictionary containing batch data with 'transcription' field
+        allowed_chars: String containing all allowed characters
+        apply_accent_replacements: Whether to apply accent replacements
+    
+    Returns:
+        Batch with cleaned transcriptions
+    """
+    # Convert to set once for the entire batch for better performance
+    allowed_char_set = set(allowed_chars)
+    
+    # apply cleaning to all transcriptions in the batch
+    batch["clean_transcription"] = [
+        _clean_text_with_set(text, allowed_char_set, apply_accent_replacements) 
+        for text in batch["transcription"]
+    ]
+    return batch
+
+
+def _clean_text_with_set(text, allowed_set, apply_accent_replacements=True):
+    """Internal function that uses pre-computed set for faster cleaning"""
     
     # apply NFC normalization
     text = unicodedata.normalize("NFC", text)
     
     # replace problematic chars with standard equivalents
-    #text = text.replace('\xa0', ' ')
-    #text = text.replace('，', ' ')  # remove chinese comma
-    #text = text.replace('．', '.')
-    #text = text.replace("’", "'")
-    text = text.replace("’", "'").replace("ʼ", "'")
+    text = text.replace("'", "'").replace("ʼ", "'")
 
-    # simple replacements for lowercase accented characters
-    # this is only for Fulani
-    replacements = {
-        "á": "a", "à": "a", "â": "a", "ä": "a", "ã": "a", "å": "a", "ā": "a",
-        "é": "e", "è": "e", "ê": "e", "ë": "e", "ē": "e",
-        "í": "i", "ì": "i", "î": "i", "ï": "i", "ī": "i",
-        "ó": "o", "ò": "o", "ô": "o", "ö": "o", "õ": "o", "ō": "o",
-        "ú": "u", "ù": "u", "û": "u", "ü": "u", "ū": "u",
-        "ç": "c",
-        "ñ": "n",
-        "ÿ": "y",
-    }
+    # apply accent replacements using pre-computed dictionary
+    if apply_accent_replacements:
+        for src, tgt in _ACCENT_REPLACEMENTS.items():
+            text = text.replace(src, tgt)
 
-    for src, tgt in replacements.items():
-        text = text.replace(src, tgt)
-
-    # keep only allowed characters
-    # allowed = "abcdefghijklmnopqrstuvwxyz \'" 
-    #allowed = " abcdefghijklmnopqrstuvwxyz0123456789\'"
-    #allowed = "abcdefghijklmnopqrstuvwxyzĩũ \'"
-    
-    # this is only for Fulani
-    #allowed = "abcdefghijklmnopqrstuvwxyzɓɗƴŋɲ '"
-    
-    # for Zulu 
-    allowed = "abcdefghijklmnopqrstuvwxyz0123456789 -'"
-
-
-    text = ''.join(c for c in text if c.lower() in allowed)
+    # keep only allowed characters (use pre-computed set)
+    text = ''.join(c for c in text if c.lower() in allowed_set)
     
     # normalize whitespace
     text = re.sub(r'\s+', ' ', text).strip()
     
     return text.lower()
-
-def clean_text_batch(batch: Dict[str, Any]) -> Dict[str, Any]:
-    """clean text in a batch of data"""
-
-    # apply cleaning to all transcriptions in the batch
-    batch["clean_transcription"] = [
-        clean_text(text) for text in batch["transcription"]
-    ]
-    return batch
 
 
 def extract_all_chars(batch: Dict[str, List[str]]) -> Dict[str, List[Any]]:

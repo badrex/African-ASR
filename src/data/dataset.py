@@ -78,14 +78,16 @@ def load_datasets(config: ASRConfig) -> Tuple[Dataset, Dataset]:
     
     # remove samples that are longer than a max duration threshold
     max_duration = 42.0 
-    logging.info("Removing samples that are longer than 40 seconds...")
+    logging.info(f"Removing samples that are longer than {max_duration} seconds...")
     train_dataset = train_dataset.filter(
         lambda x: x["audio_duration"] < max_duration,
+        num_proc=8,  # Use multiple CPU cores for parallel processing
         desc="Removing long samples in train split"
     )
 
     dev_dataset = dev_dataset.filter(
         lambda x: x["audio_duration"] < max_duration,
+        num_proc=8,  # Use multiple CPU cores for parallel processing
         desc="Removing long samples in dev split"
     )
 
@@ -93,14 +95,16 @@ def load_datasets(config: ASRConfig) -> Tuple[Dataset, Dataset]:
     # Preprocess text transcripts by removing special characters
     logging.info(f"Preprocessing text transcripts...")
     train_dataset = train_dataset.map(
-        lambda batch: clean_text_batch(batch),
+        lambda batch: clean_text_batch(batch, config.character_set, config.apply_accent_replacements),
         batched=True,
         batch_size=64,
+        desc="Cleaning text transcripts in train split"
     )
     dev_dataset = dev_dataset.map(
-        lambda batch: clean_text_batch(batch),
+        lambda batch: clean_text_batch(batch, config.character_set, config.apply_accent_replacements),
         batched=True,
         batch_size=64,
+        desc="Cleaning text transcripts in dev split"
     )
     
     return train_dataset, dev_dataset
@@ -123,7 +127,7 @@ def build_vocabulary(train_dataset: Dataset,
     train_vocab = train_dataset.map(
         extract_all_chars,
         batched=True,
-        batch_size=-1,
+        batch_size=-1,  # Process all at once for vocabulary extraction
         keep_in_memory=True,
         remove_columns=train_dataset.column_names
     )
@@ -131,7 +135,7 @@ def build_vocabulary(train_dataset: Dataset,
     dev_vocab = dev_dataset.map(
         extract_all_chars,
         batched=True,
-        batch_size=-1,
+        batch_size=-1,  # Process all at once for vocabulary extraction
         keep_in_memory=True,
         remove_columns=dev_dataset.column_names
     )

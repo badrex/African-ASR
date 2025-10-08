@@ -44,6 +44,8 @@ class ASRConfig:
     sample: bool = False
     sample_size: int = 1000
     #chars_to_remove_regex: str = r'[\,\?\.\!\-\;\:\"\"\%\"\�\']'
+    character_set: str = "abcdefghijklmnopqrstuvwxyz0123456789 -'"
+    apply_accent_replacements: bool = True
     
     # Model mappings
     pretrained_model_map: Dict[str, str] = field(default_factory=lambda: {
