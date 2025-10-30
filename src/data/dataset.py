@@ -38,7 +38,6 @@ def load_datasets(config: ASRConfig) -> Tuple[Dataset, Dataset]:
                          f"{config.dataset_path}...")
             
             dataset = DatasetDict.load_from_disk(config.dataset_path)
-
         else:
             raise ValueError(f"dataset_path to a local dataset must be specified "
                              f"when use_custom_dataset is True")
@@ -50,20 +49,80 @@ def load_datasets(config: ASRConfig) -> Tuple[Dataset, Dataset]:
             config.dataset_path,
             verification_mode="no_checks", 
         )
+
+    # cast audio column to Audio with 16000 Hz sampling rate
+    dataset = dataset.cast_column("audio", Audio(sampling_rate=16000))
     
     train_dataset = dataset[config.train_split]
     dev_dataset = dataset[config.eval_split]
 
-    # Remove unwanted features
-    #features_to_remove = [
-    #    "audio_id", "gender", "age_group", "category", 
-    #]
+    # if there is a feature called "transcript" rename it to "transcription"
+    # if it is called "transcription" just keep it
+    if "transcription" in train_dataset.column_names:
+        pass
+    elif "transcript" in train_dataset.column_names:
+        train_dataset = train_dataset.rename_column("transcript", "transcription")
+    # else if it is "text" rename it to "transcription"
+    elif "text" in train_dataset.column_names:
+        train_dataset = train_dataset.rename_column("text", "transcription")    
+    else:
+        raise ValueError(f"Transcription column was not found in train dataset,"
+                         f"which should be called 'transcript', 'text', or 'transcription'."
+                         f"Found columns: {train_dataset.column_names}.")
     
-    # Sample dataset if specified
-    if config.sample:
-        logging.info(f"Sampling dataset to {config.sample_size} samples...")
-        train_dataset = train_dataset.select(range(config.sample_size))
-        #dev_dataset = dev_dataset.select(range(3989))
+    # same for dev dataset
+    if "transcription" in dev_dataset.column_names:
+        pass
+    elif "transcript" in dev_dataset.column_names:
+        dev_dataset = dev_dataset.rename_column("transcript", "transcription")
+    elif "text" in dev_dataset.column_names:
+        dev_dataset = dev_dataset.rename_column("text", "transcription")
+    else:
+        raise ValueError(f"Transcription column was not found in dev dataset,"
+                         f"which should be called 'transcript', 'text', or 'transcription'."
+                         f"Found columns: {dev_dataset.column_names}.")
+
+    # if there is a column called "duration" rename it to "audio_duration"
+    if "duration" in train_dataset.column_names:
+        train_dataset = train_dataset.rename_column("duration", "audio_duration")
+    elif "audio_duration" in train_dataset.column_names:
+        pass
+    else:
+        #TODO: add audio_duration column to train dataset
+        raise ValueError(f"Audio duration column was not found in train dataset,"
+                         f"which should be called 'duration' or 'audio_duration'."
+                         f"Found columns: {train_dataset.column_names}.")
+
+    # same for dev dataset
+    if "duration" in dev_dataset.column_names:
+        dev_dataset = dev_dataset.rename_column("duration", "audio_duration")
+    elif "audio_duration" in dev_dataset.column_names:
+        pass
+    else:
+        #TODO: add audio_duration column to dev dataset
+        raise ValueError(f"Audio duration column was not found in dev dataset,"
+                         f"which should be called 'duration' or 'audio_duration'."
+                         f"Found columns: {dev_dataset.column_names}.")
+
+    # if there is a column called "audio_filepath" rename it to "audio"
+    if "audio_filepath" in train_dataset.column_names:
+        train_dataset = train_dataset.rename_column("audio_filepath", "audio")
+    elif "audio" in train_dataset.column_names:
+        pass
+    else:
+        raise ValueError(f"Audio filepath column was not found in train dataset,"
+                         f"which should be called 'audio_filepath' or 'audio'."
+                         f"Found columns: {train_dataset.column_names}.")
+    
+    # same for dev dataset  
+    if "audio_filepath" in dev_dataset.column_names:
+        dev_dataset = dev_dataset.rename_column("audio_filepath", "audio")
+    elif "audio" in dev_dataset.column_names:
+        pass
+    else:
+        raise ValueError(f"Audio filepath column was not found in dev dataset,"
+                         f"which should be called 'audio_filepath' or 'audio'."
+                         f"Found columns: {dev_dataset.column_names}.")
     
     # Remove features not used in training 
     logging.info(f"Removing unnecessary columns...")
@@ -81,15 +140,34 @@ def load_datasets(config: ASRConfig) -> Tuple[Dataset, Dataset]:
     logging.info(f"Removing samples that are longer than {max_duration} seconds...")
     train_dataset = train_dataset.filter(
         lambda x: x["audio_duration"] < max_duration,
-        num_proc=8,  # Use multiple CPU cores for parallel processing
+        num_proc=4,  # Use multiple CPU cores for parallel processing
         desc="Removing long samples in train split"
     )
 
     dev_dataset = dev_dataset.filter(
         lambda x: x["audio_duration"] < max_duration,
-        num_proc=8,  # Use multiple CPU cores for parallel processing
+        num_proc=4,  # Use multiple CPU cores for parallel processing
         desc="Removing long samples in dev split"
     )
+
+    # remove samples that are shorter than one second
+    logging.info(f"Removing samples that are shorter than one second...")
+    train_dataset = train_dataset.filter(
+        lambda x: x["audio_duration"] > 1.0,
+        num_proc=4,  # Use multiple CPU cores for parallel processing
+        desc="Removing short samples in train split"
+    )
+    dev_dataset = dev_dataset.filter(
+        lambda x: x["audio_duration"] > 1.0,
+        num_proc=4,  # Use multiple CPU cores for parallel processing
+        desc="Removing short samples in dev split"
+    )
+
+    # Sample dataset if specified
+    if config.sample:
+        logging.info(f"Sampling dataset to {config.sample_size} samples...")
+        train_dataset = train_dataset.select(range(config.sample_size))
+        #dev_dataset = dev_dataset.select(range(3989))
 
 
     # Preprocess text transcripts by removing special characters
@@ -227,25 +305,6 @@ def prepare_datasets(train_dataset: Dataset,
     Returns:
         Tuple of prepared (train_dataset, test_dataset)
     """
-    # Cast audio column to Audio with correct sampling rate, if not already 16000 Hz
-    # commented out because it is not needed for the current dataset
-
-    # train_dataset = train_dataset.cast_column("audio", Audio(sampling_rate=16_000))
-    # test_dataset = test_dataset.cast_column("audio", Audio(sampling_rate=16_000))
-    
-    # Prepare datasets
-    # train_dataset = train_dataset.map(
-    #     lambda batch: prepare_dataset(batch, processor),
-    #     num_proc=8,
-    #     remove_columns=train_dataset.column_names
-    # )
-    
-    # eval_dataset = eval_dataset.map(
-    #     lambda batch: prepare_dataset(batch, processor),
-    #     num_proc=8,
-    #     remove_columns=eval_dataset.column_names
-    # )
-
     train_dataset = train_dataset.map(
         lambda batch: prepare_dataset_batch(batch, processor),
         batched=True,

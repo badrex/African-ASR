@@ -218,13 +218,13 @@ def main():
     processor = create_processor(config, model_dir)
 
     # save processor to disk 
-    logging.info(f"Saving processor to {model_dir}...")
-    processor.save_pretrained(model_dir)
+    logging.info(f"Saving processor to {model_dir}/processor/")
+    processor.save_pretrained(model_dir + "/processor/")
 
     logging.info(f"Type of the processor: {type(processor)}")   
 
     # Create model
-    logging.info(f"Creating model from {config.pretrained_model}...")
+    logging.info(f"Creating model from the pretraiend {config.pretrained_model} model...")
     model = create_asr_model(config, processor)
 
     # check if distributed training is available
