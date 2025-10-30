@@ -48,25 +48,25 @@ python3 kinyarwanda-ASR/scripts/train_model.py \
 
 ```yaml
 # Project settings
-project: "Kinyarwanda-ASR"
-output_dir: "inprogress/kinyarwanda-ASR"
-seed: 42
+project: "Swahili-ASR"
+output_dir: "inprogress/swahili-ASR"
+seed: 4252
 
 # Model settings
-pretrained_model: "facebook/w2v-bert-2.0"  # or "facebook/mms-300m"  
+pretrained_model: "facebook/mms-300m" #"ajesujoba/AfriHuBERT" #"facebook/w2v-bert-2.0"  #"facebook/mms-300m"  #"facebook/w2v-bert-2.0"
 freeze_feature_encoder: true
 
 # Training settings
-batch_size: 4
-gradient_accumulation_steps: 8
+batch_size: 16
+gradient_accumulation_steps: 2
 num_epochs: 25
-max_steps: 16000
-learning_rate: 0.00005
+max_steps: 4000
+learning_rate: 0.00007
 warmup_ratio: 0.1
 fp16: true
 gradient_checkpointing: true
-save_steps: 800
-eval_steps: 800
+save_steps: 400
+eval_steps: 400
 logging_steps: 5
 save_total_limit: 2
 
@@ -74,14 +74,24 @@ save_total_limit: 2
 # if use_custom_dataset is true, then dataset_path is the path to the custom dataset on disk
 # if use_custom_dataset is false, then dataset_path is the dataset repo name on the HF hub
 use_custom_dataset: false
-# if from HF hub, use the repo name such as badrex/kinyarwanda-speech-500h
-dataset_path: "badrex/kinyarwanda-speech-1000h" 
+# if from HF hub, use the repo name badrex/kinyarwanda-speech-500h
+dataset_path: "badrex/swahili-speech-400hr" #"./kinyarwanda-ASR/kinyarwanda_asr_dataset" 
 train_split: "train"
 eval_split: "validation"
 
 # Data sampling settings (for debugging purposes)
-sample: false
-sample_size: 1800 
+sample: true
+sample_size: 1800 #1950 #124583 #16890 #33760 #64541 # not used if sample is false # 100hr > 16890, 50hr > 8450, 10hr > 1700, 1hr > 180
+#include_apstrophes: true
+
+# Text preprocessing settings
+# Character set allowed in transcriptions - customize based on your language
+# Examples:
+#   Zulu/English: "abcdefghijklmnopqrstuvwxyz0123456789 -'"
+#   Kinyarwanda: "abcdefghijklmnopqrstuvwxyzĩũ '"
+#   Fulani: "abcdefghijklmnopqrstuvwxyzɓɗƴŋɲ '"
+character_set: "abcdefghijklmnopqrstuvwxyz0123456789 -'"
+apply_accent_replacements: true
 
 ```
 
