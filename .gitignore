@@ -1,0 +1,2 @@
+config_files/ASR_train_config*.yaml
+!config_files/ASR_train_config_sample.yaml
