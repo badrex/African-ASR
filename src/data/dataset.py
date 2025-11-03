@@ -3,6 +3,7 @@ import json
 import logging
 from typing import Dict, Tuple, List, Any, Optional, Union
 from datasets import load_dataset, Dataset, Audio, DatasetDict
+from tqdm import tqdm
 
 from transformers import (
     Wav2Vec2CTCTokenizer, 
@@ -50,9 +51,17 @@ def load_datasets(config: ASRConfig) -> Tuple[Dataset, Dataset]:
             verification_mode="no_checks", 
         )
 
+        # save dataset to disk
+        # logging.info(f"Saving dataset to disk...")
+        # dataset.save_to_disk("switchboard-dataset")
+        # logging.info(f"Dataset saved to disk at switchboard-dataset")
+
     # cast audio column to Audio with 16000 Hz sampling rate
+    logging.info(f"Casting audio column to Audio with 16000 Hz sampling rate...")
     dataset = dataset.cast_column("audio", Audio(sampling_rate=16000))
     
+    # making splits
+    logging.info(f"Creating train and dev splits...")
     train_dataset = dataset[config.train_split]
     dev_dataset = dataset[config.eval_split]
 
@@ -88,10 +97,22 @@ def load_datasets(config: ASRConfig) -> Tuple[Dataset, Dataset]:
     elif "audio_duration" in train_dataset.column_names:
         pass
     else:
-        #TODO: add audio_duration column to train dataset
-        raise ValueError(f"Audio duration column was not found in train dataset,"
-                         f"which should be called 'duration' or 'audio_duration'."
-                         f"Found columns: {train_dataset.column_names}.")
+        # create audio_duration column
+        audio_duration_list = []
+
+        for audio in tqdm(train_dataset["audio"], 
+                               total=len(train_dataset["audio"]),  # Use multiple CPU cores for parallel processing
+                               desc="Calculating audio duration in train dataset"):
+            try:
+                audio_duration_list.append(len(audio["array"]) / audio["sampling_rate"])
+            except Exception as e:
+                logging.error(f"Error calculating audio duration for audio {audio}: {e}")
+                audio_duration_list.append(0.0)
+
+        logging.info(f"Creating audio_duration column in train dataset...")
+        train_dataset = train_dataset.add_column(
+            "audio_duration", audio_duration_list
+        )
 
     # same for dev dataset
     if "duration" in dev_dataset.column_names:
@@ -99,10 +120,36 @@ def load_datasets(config: ASRConfig) -> Tuple[Dataset, Dataset]:
     elif "audio_duration" in dev_dataset.column_names:
         pass
     else:
-        #TODO: add audio_duration column to dev dataset
-        raise ValueError(f"Audio duration column was not found in dev dataset,"
-                         f"which should be called 'duration' or 'audio_duration'."
-                         f"Found columns: {dev_dataset.column_names}.")
+        # create audio_duration column
+        audio_duration_list = []
+
+        for audio in tqdm(dev_dataset["audio"], 
+                               total=len(dev_dataset["audio"]), 
+                               desc="Calculating audio duration in dev dataset"):
+            
+            try:
+                audio_duration_list.append(len(audio["array"]) / audio["sampling_rate"])
+            except Exception as e:
+                logging.error(f"Error calculating audio duration for audio {audio}: {e}")
+                audio_duration_list.append(0.0)
+
+        logging.info(f"Creating audio_duration column in dev dataset...")
+        dev_dataset = dev_dataset.add_column(
+            "audio_duration", audio_duration_list
+        )
+
+    # save dataset to disk
+    # NOTE: this was added only for the switchboard dataset 
+    # to save time on re-computing the audio duration
+    # logging.info(f"Saving dataset to disk...")
+    # dataset = DatasetDict({
+    #     "train": train_dataset,
+    #     "dev": dev_dataset
+    # })
+    # dataset.save_to_disk("switchboard-dataset-processed")
+    # logging.info(f"Dataset saved to disk at switchboard-dataset-processed")
+
+    
 
     # if there is a column called "audio_filepath" rename it to "audio"
     if "audio_filepath" in train_dataset.column_names:
