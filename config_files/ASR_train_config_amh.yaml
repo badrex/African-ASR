@@ -1,0 +1,47 @@
+# Project settings
+project: "Ethiopian-ASR"
+output_dir: "inprogress/ethiopian-ASR"
+seed: 42
+
+# Model settings
+pretrained_model: "facebook/w2v-bert-2.0" #"ajesujoba/AfriHuBERT" #  #"facebook/mms-300m"  #"facebook/w2v-bert-2.0"
+freeze_feature_encoder: true
+
+# Training settings
+batch_size: 4
+gradient_accumulation_steps: 8
+num_epochs: 25
+max_steps: 8000
+learning_rate: 0.00005
+warmup_ratio: 0.1
+fp16: true
+gradient_checkpointing: true
+save_steps: 400
+eval_steps: 400
+logging_steps: 5
+save_total_limit: 2
+
+# Data settings
+# if use_custom_dataset is true, then dataset_path is the path to the custom dataset on disk
+# if use_custom_dataset is false, then dataset_path is the dataset repo name on the HF hub
+use_custom_dataset: false
+# if from HF hub, use the repo name badrex/kinyarwanda-speech-500h
+dataset_path: "badrex/amharic-speech" #"badrex/swahili-speech-400hr" #"./kinyarwanda-ASR/kinyarwanda_asr_dataset" 
+train_split: "train"
+eval_split: "validation"
+
+# Data sampling settings (for debugging purposes)
+sample: false
+sample_size: 180
+#include_apstrophes: true
+
+# Text preprocessing settings
+# Character set allowed in transcriptions - customize based on your language
+# Examples:
+#   Zulu/English: "abcdefghijklmnopqrstuvwxyz0123456789 -'"
+#   Kinyarwanda: "abcdefghijklmnopqrstuvwxyzĩũ '"
+#   Fulani: "abcdefghijklmnopqrstuvwxyzɓɗƴŋɲ '"
+apply_accent_replacements: true
+character_set: " 0123456789ሀሁሂሃሄህሆለሉሊላሌልሎሐሑሒሓሔሕሖመሙሚማሜምሞሠሡሢሣሤሥሦረሩሪራሬርሮሰሱሲሳሴስሶሸሹሺሻሼሽሾቀቁቂቃቄቅቆበቡቢባቤብቦቨቩቪቫቬቭቮተቱቲታቴትቶቸቹቺቻቼችቾኀኁኂኃኄኅኆነኑኒናኔንኖኘኙኚኛኜኝኞአኡኢኣኤእኦኧከኩኪካኬክኮኸኹኺኻኼኽኾወዉዊዋዌውዎዐዑዒዓዔዕዖዘዙዚዛዜዝዞየዩዪያዬይዮደዱዲዳዴድዶጀጁጂጃጄጅጆገጉጊጋጌግጎጠጡጢጣጤጥጦጨጩጪጫጬጭጮጰጱጲጳጴጵጶጸጹጺጻጼጽጾፀፁፂፃፄፅፆፈፉፊፋፌፍፎፐፑፒፓፔፕፖ"
+
+
